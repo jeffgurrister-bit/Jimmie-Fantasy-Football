@@ -107,27 +107,21 @@ managers:
   - id: josh-jones
     canonical_name: Josh Jones
     display_name: Josh
-    confirmed: false
+    confirmed: true
     aliases: ["Josh", "JOSH JONES", "Josh Jones"]
     leagues:
       - id: rbb
         first_year: 2016
     notes: >
-      ### ONE LAST YES NEEDED ###  Jimmie's roster list confirms Josh Jones and
-      Josh Baker are two different people, and notes that Josh Baker "might be
-      Yisha in there" — which is the mapping used here: bare "Josh" is Josh Jones,
-      and "Yisha" is Josh Baker.
-      Everything reconciles under it. The Google Banners tab credits Josh Baker
-      with 2018 and 2022, and in exactly those years `Finishes` shows Yisha 1st;
-      Banners credits Josh Jones with 2019, and `Finishes` shows Josh 1st in 2019.
-      But "might be" is a hedge, and this single point decides who owns two
-      championships on the front page — so it stays gated until confirmed
-      outright. See OPEN-QUESTIONS q1.
+      CONFIRMED BY JIMMIE: the bare "Josh" in the sheets is Josh Jones, and "Yisha"
+      is Josh Baker. RBB champion 2019 — which is what both sources said under this
+      mapping, so everything reconciles.
+      One of three Joneses, alongside Austin and Nick.
 
   - id: josh-baker
     canonical_name: Josh Baker
     display_name: Yisha
-    confirmed: false
+    confirmed: true
     aliases: ["Yisha", "JOSH BAKER", "Josh Baker"]
     leagues:
       - id: rbb
@@ -136,11 +130,13 @@ managers:
         first_year: 2025
         franchise: Lockport Rivermen
     notes: >
-      ### ONE LAST YES NEEDED ###  q1, the same question as josh-jones above.
-      Assumed RBB champion 2018 and 2022.
-      `display_name` is "Yisha" because that is what the RBB sheets call him and
-      what the league presumably calls him — change it to "Josh Baker" if he would
-      rather the site used his name, and keep the alias either way.
+      CONFIRMED BY JIMMIE: "Yisha" in the RBB sheets is Josh Baker. Two-time RBB
+      champion, 2018 and 2022 — which is what the Google Banners tab said all along,
+      and the reason the two sources appeared to disagree.
+      Jimmie chose "Yisha" as the site's display name; his real name shows on his
+      profile page. A different person from Josh Jones.
+      Also holds the highest single-game score in league history: 210.57 in 2019
+      week 1.
 
   - id: jacob-schmiegelt
     canonical_name: Jacob Schmiegelt
@@ -379,12 +375,8 @@ managers:
 #  above says confirmed: true, the site is cleared to go live with real names.
 # =============================================================================
 
-unresolved:
-  - id: q1-yisha-is-josh-baker
-    blocks: [josh-jones, josh-baker]
-    question: >
-      Confirm outright that "Yisha" in the RBB sheets is Josh Baker, and that the
-      bare "Josh" is Josh Jones. Jimmie's roster note says Josh Baker "might be
-      Yisha in there", and every other source agrees — but this decides who owns
-      the 2018 and 2022 championships, so it needs a definite yes rather than a
-      "might".
+# All 20 identities are confirmed and every identity question is answered, so the
+# sync will now load real names without an override. Anything still outstanding is
+# missing DATA rather than a question about who someone is — see
+# docs/OPEN-QUESTIONS.md, particularly the eight blank 2024 playoff results.
+unresolved: []

@@ -33,7 +33,7 @@ describe.skipIf(!shouldRun)('the real RBB workbook', () => {
 
   beforeAll(async () => {
     src = new XlsxSource(path);
-    resolver = new ManagerResolver(await loadManagerMap(), { allowUnconfirmed: true });
+    resolver = new ManagerResolver(await loadManagerMap());
     for (const spec of ALL_SHEETS) reads.set(spec.key, await readSheet(src, spec));
   }, 120_000);
 
@@ -104,8 +104,9 @@ describe.skipIf(!shouldRun)('the real RBB workbook', () => {
       .map((t) => [t.year, t.manager_id] as const)
       .sort((a, b) => a[0] - b[0]);
 
-    // This is the answer to the identity question, straight from the sheet:
-    // Yisha won 2018 and 2022, and bare "Josh" won 2019.
+    // Confirmed by Jimmie: "Yisha" is Josh Baker and bare "Josh" is Josh Jones.
+    // So Josh Baker is a two-time champion and Josh Jones won 2019 — which is
+    // exactly what the Google Banners tab said, reconciling the two sources.
     expect(champs).toEqual([
       [2016, 'jimmie-perkins'],
       [2017, 'ryan-hangartner'],
@@ -116,6 +117,8 @@ describe.skipIf(!shouldRun)('the real RBB workbook', () => {
       [2022, 'josh-baker'],
       [2023, 'austin-jones'],
     ]);
+    // Josh Baker holds two of the eight recorded titles.
+    expect(champs.filter(([, id]) => id === 'josh-baker')).toHaveLength(2);
     // 2024's postseason was never fully entered.
     expect(warnings.map((w) => w.code)).toContain('season_without_champion');
   });
@@ -159,7 +162,7 @@ describe.skipIf(!shouldRun)('the real RBB workbook', () => {
   it('resolves every manager name in every sheet through the identity map', () => {
     // 15 short names appear across the workbook. If any were unmapped, the
     // transforms above would already have thrown — this asserts the count.
-    const fresh = new ManagerResolver(resolver.map, { allowUnconfirmed: true });
+    const fresh = new ManagerResolver(resolver.map);
     transformGames(GAME_DATA, read(GAME_DATA).rows, fresh);
     transformLineups(LINEUP_DATA, read(LINEUP_DATA).rows, fresh);
     transformDrafts(DRAFT_HISTORY, read(DRAFT_HISTORY).rows, fresh);

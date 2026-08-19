@@ -1,27 +1,43 @@
 # Open questions for Jimmie
 
-Ordered by how much they block the build. Questions 1–3 change the database
-schema's contents, so they come first.
+Ordered by how much they block the build.
 
-**Jimmie has now supplied the full RBB roster and the Dyno Mites franchise table**,
-which resolved questions 2, 3, 11 and 17 outright and reduced the identity blockers
-from nine managers to two. Run `pnpm --filter @jff/sync check-managers` at any time
-to see what is still outstanding.
+**Every identity question is now answered.** All 20 managers across both leagues are
+confirmed, and `pnpm --filter @jff/sync check-managers` reports "Cleared to
+publish". What is left below is either **missing data** (the 2024 playoff results,
+the 2025 season) or **preferences** (domains, whether to publish power-rankings
+commentary) — nothing that blocks the schema.
+
+Jimmie supplied the full RBB roster and the Dyno Mites franchise table, and
+confirmed the Josh/Yisha mapping, which closed questions 1, 2, 3, 11 and 17.
 
 ---
 
-## Blocking the first real load
+## Answered
 
-### 1. Confirm outright: `Yisha` = Josh Baker, bare `Josh` = Josh Jones — THE LAST BLOCKER
+### ~~1. Is `Yisha` Josh Baker, and is bare `Josh` Josh Jones?~~ — ANSWERED: yes
 
-**Status: all but confirmed, needs a definite yes.** Jimmie's roster lists Josh
-Baker and Josh Jones as two different people and notes Josh Baker *"might be Yisha
-in there"*. That is the mapping now in `data/managers.yaml` — but "might be" is a
-hedge, and this one point decides who owns two championships on the front page, so
-it stays gated.
+Confirmed by Jimmie. This was the last identity blocker, and it reconciles the two
+sources completely — the Google `Banners` tab and the Excel `Finishes` sheet had been
+describing the same people under different names all along.
 
-Under this mapping **Josh Baker is a two-time champion (2018, 2022)** and **Josh
-Jones won 2019**. Get it backwards and both those facts land on the wrong man.
+The resulting championship wall:
+
+| Year | Champion | Shown as |
+| --- | --- | --- |
+| 2016 | Jimmie Perkins | Jimmie |
+| 2017 | Ryan Hangartner | Ryan |
+| 2018 | **Josh Baker** | Yisha |
+| 2019 | **Josh Jones** | Josh |
+| 2020 | Ryan Hangartner | Ryan |
+| 2021 | Jimmie Perkins | Jimmie |
+| 2022 | **Josh Baker** | Yisha |
+| 2023 | Austin Jones | Austin |
+| 2024 | *no result recorded* | — see q5 |
+
+Three managers are tied on two titles each: Jimmie Perkins, Josh Baker and Ryan
+Hangartner. Jimmie chose to have Josh Baker shown as **"Yisha"** on the site, with
+his real name on his profile page.
 
 The Google `Banners` tab and the Excel `Finishes` sheet disagree about two
 championships:
@@ -62,7 +78,7 @@ Two different Joes. Bare `Joe` in the sheets is Joe Malak; `Joe G.` played 2016 
 
 ---
 
-## Blocking the historical backfill
+## Now the top blockers: missing data, not open questions
 
 ### 4. Where does 2025 RBB game and lineup data live?
 

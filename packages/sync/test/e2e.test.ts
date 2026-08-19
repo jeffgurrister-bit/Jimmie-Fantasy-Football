@@ -41,7 +41,7 @@ describe.skipIf(!shouldRun)('end-to-end sync against Postgres', () => {
     // Start from empty so counts are exact rather than cumulative.
     await query(`truncate leagues, managers, players cascade`);
 
-    const resolver = await createResolver({ allowUnconfirmed: true });
+    const resolver = await createResolver();
     const result = await runRbbSync({
       source: new XlsxSource(workbookPath),
       resolver,
@@ -147,7 +147,7 @@ describe.skipIf(!shouldRun)('end-to-end sync against Postgres', () => {
       return r!.s;
     };
     const before = await snapshot();
-    const resolver = await createResolver({ allowUnconfirmed: true });
+    const resolver = await createResolver();
     const again = await runRbbSync({
       source: new XlsxSource(workbookPath),
       resolver,

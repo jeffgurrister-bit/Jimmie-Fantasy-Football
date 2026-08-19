@@ -224,15 +224,28 @@ describe('the real data/managers.yaml', () => {
     }
   });
 
-  it('is honest that it is not ready to publish yet', async () => {
-    // Only the 2018/2022 championship question remains, so the map must NOT
-    // claim to be clean. If this test fails, either Jimmie confirmed the
-    // Josh/Yisha mapping (good — delete this test) or someone marked a guess as
-    // confirmed (bad).
+  it('is cleared to publish — every identity confirmed, no questions open', async () => {
+    // Jimmie confirmed the last of them (Yisha = Josh Baker). If this test starts
+    // failing, someone has added a manager without confirming who they are, and
+    // the sync will refuse to run until they do.
     const text = await readFile(MANAGERS_PATH, 'utf8');
     const resolver = new ManagerResolver(parseManagerMap(text));
-    expect(resolver.isCleanForProduction).toBe(false);
-    expect(resolver.unconfirmed.map((m) => m.id).sort()).toEqual(['josh-baker', 'josh-jones']);
+    expect(resolver.unconfirmed).toEqual([]);
+    expect(resolver.map.unresolved).toEqual([]);
+    expect(resolver.isCleanForProduction).toBe(true);
+  });
+
+  it('resolves the two Joshes the way Jimmie confirmed', async () => {
+    // The bare "Josh" is Josh JONES; "Yisha" is Josh BAKER. This is the mapping
+    // that decides who owns the 2018 and 2022 championships, so it is asserted
+    // explicitly rather than left to the general alias machinery.
+    const text = await readFile(MANAGERS_PATH, 'utf8');
+    const r = new ManagerResolver(parseManagerMap(text));
+    expect(r.resolve('Josh', 'GameData')).toBe('josh-jones');
+    expect(r.resolve('Yisha', 'GameData')).toBe('josh-baker');
+    // He is shown as "Yisha" on the site, by his own choice, but is really Josh Baker.
+    expect(r.get('josh-baker')!.display_name).toBe('Yisha');
+    expect(r.get('josh-baker')!.canonical_name).toBe('Josh Baker');
   });
 
   it('has all 15 RBB managers and the 13 Dyno Mites franchises', async () => {

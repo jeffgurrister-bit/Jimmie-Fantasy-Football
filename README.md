@@ -40,7 +40,7 @@ Corollaries, which are enforced in code rather than left to discipline:
 | `packages/db` | Postgres schema (4 migrations), migration runner, row types |
 | `packages/sync` | Column contract, fail-loud validation, xlsx + Google Sheets readers, transforms, idempotent loader, CLI |
 | `docs/` | Column contract (generated), open questions, data model, how-to-update guide |
-| Tests | 129 passing — unit, end-to-end against real Postgres, and 11 against the real workbook |
+| Tests | 130 passing — unit, end-to-end against real Postgres, and 11 against the real workbook |
 | `apps/rbb`, `apps/dynomites`, `packages/ui` | **Not built yet** — see below |
 
 ### Not built yet
@@ -131,29 +131,27 @@ committed.
 `check-managers` exits non-zero and lists what is outstanding while any manager
 identity is unconfirmed. That is expected today — see below.
 
-## Before this can go live
+## Identity: settled
 
-**One question left.** Jimmie has supplied the full RBB roster and the Dyno Mites
-franchise table, so 18 of 20 manager identities are confirmed. All 20 people are
-mapped, across both leagues, with 13 Dyno Mites franchises.
-
-What remains is the Josh/Yisha mapping. The roster confirms Josh Jones and Josh
-Baker are different people and notes Josh Baker *"might be Yisha in there"* — which
-is the mapping in place, and every source agrees with it. But under it **Josh Baker
-is a two-time champion (2018, 2022)** and **Josh Jones won 2019**, so a hedge is not
-enough:
+All 20 managers across both leagues are confirmed, so the sync loads real names with
+no override:
 
 ```
 $ pnpm --filter @jff/sync check-managers
-2 of 20 manager identities are not confirmed yet:
-  - Josh (Josh Jones)
-  - Yisha (Josh Baker)
+All 20 manager identities are confirmed. Cleared to publish.
 ```
 
-`--allow-unconfirmed` overrides it for local preview and flags those two as
-provisional. See [docs/OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md).
+The question that drove the whole design — whether `Yisha` was Josh Baker — is
+answered: it is, and the bare `Josh` is Josh Jones. That reconciles the Google
+`Banners` tab with the Excel `Finishes` sheet completely; they had been describing
+the same people under different names. **Josh Baker is a two-time champion (2018,
+2022)** and **Josh Jones won 2019**, with three managers tied on two titles each.
 
-### Names collide, so nothing keys off them
+Had that been guessed the other way, two championships would have sat on the wrong
+man's profile from day one — which is why the sync refused to run until it was
+confirmed, rather than picking the likelier option.
+
+### Names still collide, so nothing keys off them
 
 Across the two leagues: two Perkinses, two Malaks, **three** Joneses, two Joshes,
 two Joes, two Jonathans and two Amezcuas. Every table keys off `managers.id` from
