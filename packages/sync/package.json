@@ -14,7 +14,8 @@
     "check-managers": "tsx src/cli.ts check-managers",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "verify": "tsx src/doctor.ts"
+    "verify": "tsx src/doctor.ts",
+    "snapshot": "tsx src/snapshot.ts"
   },
   "dependencies": {
     "@jff/db": "workspace:*",

@@ -92,7 +92,7 @@ export async function titleCounts(leagueId: LeagueId): Promise<TitleCount[]> {
        join managers m on m.id = ts.manager_id
      where s.league_id = $1 and ts.final_finish = 1
      group by 1, 2, 3
-     order by titles desc, m.display_name`,
+     order by titles desc, m.display_name, m.id`,
     [leagueId],
   );
 }
@@ -155,7 +155,7 @@ export async function allTimeStandings(
        join managers m on m.id = g.manager_id
        join manager_leagues ml on ml.manager_id = m.id and ml.league_id = $1
        left join titles t on t.manager_id = m.id
-     order by wins desc, win_pct desc, points_for desc`,
+     order by wins desc, win_pct desc, points_for desc, m.id`,
     [leagueId, timeOfSeason],
   );
 }
@@ -398,7 +398,7 @@ export async function recordGames(
        left join team_seasons ots on ots.id = gt.opponent_team_season_id
        left join managers om on om.id = ots.manager_id
      where s.league_id = $1 and gt.${flag}
-     order by gt.score ${direction}
+     order by gt.score ${direction}, s.year, g.week, m.id
      limit $2`,
     [leagueId, limit],
   );
@@ -423,7 +423,7 @@ export async function marginRecords(
        left join team_seasons ots on ots.id = gt.opponent_team_season_id
        left join managers om on om.id = ots.manager_id
      where s.league_id = $1 and gt.is_winner and gt.point_diff is not null and g.was_played
-     order by gt.point_diff ${order}
+     order by gt.point_diff ${order}, s.year, g.week, m.id
      limit $2`,
     [leagueId, limit],
   );
@@ -455,7 +455,9 @@ export async function benchRegret(leagueId: LeagueId, limit = 25): Promise<Bench
        join managers m on m.id = ts.manager_id
        left join players p on p.id = ls.player_id
      where s.league_id = $1 and ls.bench_gap is not null and ls.was_started = false
-     order by ls.bench_gap desc
+     -- Ties on bench_gap are real (two rows sit at 37.95), so the order is fully
+     -- specified rather than left to the planner.
+     order by ls.bench_gap desc, s.year, ls.week, m.id
      limit $2`,
     [leagueId, limit],
   );

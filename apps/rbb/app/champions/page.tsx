@@ -1,14 +1,14 @@
 import Link from 'next/link';
-import { champions, isDatabaseConfigured, titleCounts } from '@jff/db';
-import { NotConnected } from '../../components/NotConnected.tsx';
+import { NoData } from '../../components/NoData.tsx';
 import { ordinal } from '../../lib/format.ts';
+import { champions, titleCounts } from '../../lib/data.ts';
 
-export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Champions — Risky Biscuit Brigade' };
 
-export default async function ChampionsPage(): Promise<React.ReactElement> {
-  const [champs, titles] = await Promise.all([champions('rbb'), titleCounts('rbb')]);
-  if (champs.length === 0) return <NotConnected configured={isDatabaseConfigured()} />;
+export default function ChampionsPage(): React.ReactElement {
+  const champs = champions();
+  const titles = titleCounts();
+  if (champs.length === 0) return <NoData />;
 
   return (
     <>

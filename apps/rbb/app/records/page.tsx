@@ -1,11 +1,10 @@
 import Link from 'next/link';
-import { isDatabaseConfigured, marginRecords, recordGames } from '@jff/db';
-import { NotConnected } from '../../components/NotConnected.tsx';
+import { NoData } from '../../components/NoData.tsx';
 import { ScrollTable } from '../../components/Table.tsx';
 import { num } from '../../lib/format.ts';
+import { records } from '../../lib/data.ts';
 import type { RecordGame } from '@jff/db';
 
-export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Records — Risky Biscuit Brigade' };
 
 function GameTable({ rows, showDiff }: { rows: RecordGame[]; showDiff?: boolean }) {
@@ -41,14 +40,9 @@ function GameTable({ rows, showDiff }: { rows: RecordGame[]; showDiff?: boolean 
   );
 }
 
-export default async function RecordsPage(): Promise<React.ReactElement> {
-  const [careerHigh, careerLow, blowouts, nailbiters] = await Promise.all([
-    recordGames('rbb', 'career_high'),
-    recordGames('rbb', 'career_low'),
-    marginRecords('rbb', 'blowout'),
-    marginRecords('rbb', 'nailbiter'),
-  ]);
-  if (careerHigh.length === 0) return <NotConnected configured={isDatabaseConfigured()} />;
+export default function RecordsPage(): React.ReactElement {
+  const { careerHigh, careerLow, blowouts, nailbiters } = records();
+  if (careerHigh.length === 0) return <NoData />;
 
   return (
     <>

@@ -161,7 +161,7 @@ function report(): void {
   const warned = results.filter((r) => r.status === 'warn').length;
   console.log('');
   if (failed > 0) {
-    console.log(`${failed} problem(s) to fix. See docs/SUPABASE-SETUP.md.`);
+    console.log(`${failed} problem(s) to fix. See docs/OPTIONAL-DATABASE.md.`);
     process.exitCode = 1;
   } else if (warned > 0) {
     console.log(`Everything essential works. ${warned} thing(s) worth a look.`);

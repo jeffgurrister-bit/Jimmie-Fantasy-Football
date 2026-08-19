@@ -1,18 +1,15 @@
 import Link from 'next/link';
-import { allTimeStandings, isDatabaseConfigured } from '@jff/db';
-import { NotConnected } from '../../components/NotConnected.tsx';
+import { NoData } from '../../components/NoData.tsx';
 import { ScrollTable } from '../../components/Table.tsx';
 import { int, num, pct, record } from '../../lib/format.ts';
+import { standings } from '../../lib/data.ts';
 
-export const dynamic = 'force-dynamic';
 export const metadata = { title: 'All-time standings — Risky Biscuit Brigade' };
 
-export default async function StandingsPage(): Promise<React.ReactElement> {
-  const [regular, everything] = await Promise.all([
-    allTimeStandings('rbb', 'Regular'),
-    allTimeStandings('rbb', 'all'),
-  ]);
-  if (regular.length === 0) return <NotConnected configured={isDatabaseConfigured()} />;
+export default function StandingsPage(): React.ReactElement {
+  const regular = standings('regular');
+  const everything = standings('all');
+  if (regular.length === 0) return <NoData />;
 
   const table = (rows: typeof regular): React.ReactElement => (
     <ScrollTable

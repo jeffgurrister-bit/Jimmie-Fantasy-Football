@@ -1,15 +1,14 @@
 import Link from 'next/link';
-import { isDatabaseConfigured, seasonSummaries } from '@jff/db';
-import { NotConnected } from '../../components/NotConnected.tsx';
+import { NoData } from '../../components/NoData.tsx';
 import { ScrollTable } from '../../components/Table.tsx';
 import { int, num } from '../../lib/format.ts';
+import { seasons as allSeasons } from '../../lib/data.ts';
 
-export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Seasons — Risky Biscuit Brigade' };
 
-export default async function SeasonsPage(): Promise<React.ReactElement> {
-  const seasons = await seasonSummaries('rbb');
-  if (seasons.length === 0) return <NotConnected configured={isDatabaseConfigured()} />;
+export default function SeasonsPage(): React.ReactElement {
+  const seasons = allSeasons();
+  if (seasons.length === 0) return <NoData />;
 
   return (
     <>

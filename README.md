@@ -40,7 +40,7 @@ Corollaries, which are enforced in code rather than left to discipline:
 | `packages/db` | Postgres schema (4 migrations), migration runner, row types |
 | `packages/sync` | Column contract, fail-loud validation, xlsx + Google Sheets readers, transforms, idempotent loader, CLI |
 | `docs/` | Column contract (generated), open questions, data model, how-to-update guide |
-| Tests | 130 passing — unit, end-to-end against real Postgres, and 11 against the real workbook |
+| Tests | 142 passing — unit, end-to-end against real Postgres, 11 against the real workbook, and 12 asserting the snapshot matches the SQL |
 | `apps/rbb` | Next.js site — home, champions, all-time standings, seasons, season detail, manager profiles, records, bench regret. Mobile-first, builds without a database |
 | `apps/dynomites`, `packages/ui` | **Not built yet** |
 
@@ -50,18 +50,30 @@ The `/admin/sync` page and its cron trigger (phase 6), the lineup explorer and
 draft browser (phase 3), power rankings (phase 4), and the Dyno Mites site and its
 dynasty-table sync (phase 5). The schema for all of it is in place.
 
+### How the site gets its data — no database
+
+`pnpm snapshot --file RBB_League_History.xlsx` reads the workbook and writes
+everything the site needs into `apps/rbb/data/snapshot.json` (255 KB), which is
+committed. The site imports that file directly, so **every page is statically
+prerendered and the deployment needs no database, no connection string and no
+environment variables at all.**
+
+That was a deliberate reversal. The original plan went straight to Postgres, which
+is right for the *lineup explorer* — filtering 24,668 roster rows live — but wrong
+as a prerequisite for a nine-season standings table that fits in a quarter of a
+megabyte. Fewer moving parts matters more here than query power the current pages
+never use.
+
+The Postgres path in `packages/db` is unchanged and still tested. It is there for
+the lineup explorer, and `docs/OPTIONAL-DATABASE.md` covers setting it up when that
+arrives. `packages/sync/test/snapshot-parity.test.ts` loads the same workbook both
+ways and asserts the JSON aggregations and the SQL agree on every number, so the
+two cannot drift.
+
 ### Deploying
 
 Vercel builds `apps/rbb` via the root `vercel.json`, so a fresh clone deploys with
-no dashboard configuration. **The site builds and renders without a database** —
-every data page is server-rendered on demand and shows a "not connected yet"
-notice when `DATABASE_URL` is absent. That is deliberate: the deployment pipeline
-has to work before the data does, and a build that needs a database cannot be
-deployed until one exists.
-
-To connect it, follow [docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md). Afterwards
-`pnpm verify` reports on the connection, schema, data and totals without ever
-printing the credentials.
+no dashboard configuration and nothing to configure afterwards.
 
 When the Dyno Mites site is added, it becomes a second Vercel project with **Root
 Directory** set to `apps/dynomites`.
@@ -184,7 +196,10 @@ Mites.
   columns the site reads, and what breaks it.
 - **[docs/OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md)** — 15 questions, ordered by
   how much they block.
-- **[docs/HOW-TO-UPDATE.md](docs/HOW-TO-UPDATE.md)** — written for Jimmie, no code.
+- **[docs/HOW-TO-UPDATE.md](docs/HOW-TO-UPDATE.md)** — written for Jimmie. One
+  command, no database.
+- **[docs/OPTIONAL-DATABASE.md](docs/OPTIONAL-DATABASE.md)** — Postgres setup, for
+  when the lineup explorer needs it. Not required today.
 
 ## Layout
 

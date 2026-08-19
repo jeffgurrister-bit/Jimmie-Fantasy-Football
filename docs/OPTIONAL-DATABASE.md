@@ -1,4 +1,19 @@
-# Setting up Supabase
+# Setting up a database — OPTIONAL, not needed today
+
+**You almost certainly do not need this.** The site reads a JSON snapshot generated
+from the workbook and committed to the repo, so it needs no database, no connection
+string and no environment variables. For the normal way to keep the site current,
+see [HOW-TO-UPDATE.md](./HOW-TO-UPDATE.md).
+
+This document is for one future feature: the **lineup explorer**, which filters all
+24,668 roster rows live by year, week, manager, position, started-or-benched and
+draft round. That genuinely needs indexed queries rather than a JSON file, and this
+is how the database gets set up when we build it.
+
+Everything below still works and is still tested — it is simply not on the critical
+path any more.
+
+---
 
 Step by step, start to finish. About 20 minutes, most of it waiting for the
 database to provision and the backfill to run.

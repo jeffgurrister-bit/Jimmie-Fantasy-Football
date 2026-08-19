@@ -1,18 +1,15 @@
 import Link from 'next/link';
-import { benchRegret, draftSlotPerformance, isDatabaseConfigured } from '@jff/db';
-import { NotConnected } from '../../components/NotConnected.tsx';
+import { NoData } from '../../components/NoData.tsx';
 import { ScrollTable } from '../../components/Table.tsx';
 import { int, num, ordinal, pct } from '../../lib/format.ts';
+import { benchRegret, draftSlots } from '../../lib/data.ts';
 
-export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Bench regret — Risky Biscuit Brigade' };
 
-export default async function BenchPage(): Promise<React.ReactElement> {
-  const [regret, slots] = await Promise.all([
-    benchRegret('rbb', 25),
-    draftSlotPerformance('rbb'),
-  ]);
-  if (regret.length === 0) return <NotConnected configured={isDatabaseConfigured()} />;
+export default function BenchPage(): React.ReactElement {
+  const regret = benchRegret();
+  const slots = draftSlots();
+  if (regret.length === 0) return <NoData />;
 
   return (
     <>

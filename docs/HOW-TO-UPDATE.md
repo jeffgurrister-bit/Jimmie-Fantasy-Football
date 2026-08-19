@@ -1,98 +1,113 @@
 # How to update the site
 
-Written for Jimmie. No code, no terminal.
+Written for Jimmie. No database, no accounts, nothing to set up.
 
-## The one-sentence version
-
-**Keep updating your spreadsheets exactly the way you already do.** The website
-reads them. Nothing about your weekly routine changes.
-
-## Your weekly routine, unchanged
-
-1. Paste the Yahoo export into `Yahoo Drop` as usual.
-2. Let the formulas do their thing into `GameData` and `LineupData`.
-3. Copy from the `Google Sheet Paste` tab into `Excel Drop` in the League History
-   sheet, as usual.
-
-That's it. The website picks the change up on its own schedule — a few times a day
-during the season.
-
-## When you want it updated *right now*
-
-Open the refresh page:
+## How it works, in one line
 
 ```
-https://<the site>/admin/sync?token=<your secret link>
+your Excel workbook  →  one command  →  a file in the repo  →  the live site
 ```
 
-Bookmark that link. It's the whole admin interface. It shows you:
+The site does not read your spreadsheet directly. One command reads the workbook and
+writes everything the site needs into a single file
+(`apps/rbb/data/snapshot.json`). That file *is* part of the website. Push it and the
+site updates.
 
-- whether the last update worked, in plain English
-- when it ran
-- how many games, lineups and picks it loaded
-- anything that looked off, described in words rather than error codes
+Nothing runs in the background, there is no database to maintain, and there is
+nothing that can quietly stop working while you are not looking.
 
-Press the button, wait a few seconds, read the result. There is no login, and the
-secret in the link is the only thing protecting it — so don't post it in the
-league chat.
+## Updating it
+
+1. Update your workbook exactly as you always do — Yahoo paste, formulas, done.
+2. Run one command:
+
+   ```bash
+   pnpm snapshot --file /path/to/RBB_League_History.xlsx
+   ```
+
+   It tells you what it found:
+
+   ```
+   Wrote apps/rbb/data/snapshot.json
+     255 KB — 9 seasons, 804 games, 8 champions, 15 managers
+
+   1 thing(s) worth a look:
+     • 2024 has no team with a 1st-place finish in the Finishes sheet …
+   ```
+
+3. Commit and push:
+
+   ```bash
+   git add apps/rbb/data/snapshot.json
+   git commit -m "Update league data"
+   git push
+   ```
+
+Vercel rebuilds on its own. A minute later the site is current.
+
+## What the messages mean
+
+The command reports anything odd rather than hiding it. The ones you will see today:
+
+- **"2024 has no team with a 1st-place finish"** — the 2024 playoff results are not
+  filled in on the `Finishes` sheet; eight of the twelve teams have no `Playoff`
+  value. Fill those in and 2024 gets a champion.
+- **"Skipped 1 row … that had no Name_Yr_Wk value"** — the formula row at the very
+  bottom of the sheet. Expected, and correctly ignored.
+
+If it stops with an error instead, it names the sheet and the column. That happens
+when a column is **renamed or deleted**, or when a row is **inserted above the
+header row**. Put it back and re-run. Nothing on the live site changes in the
+meantime — it keeps serving the last good data.
 
 ## What you can change freely
 
-- Add rows. Add whole new seasons. The site picks them up.
+- Add rows. Add whole new seasons.
 - Fix a wrong score or a misspelled player name.
 - Reorder columns however you like.
-- Add new columns of your own — the site ignores what it doesn't recognise, as long
-  as you tell the developer once so it can be listed.
+- Add new columns of your own.
 
-## What will stop the update
+The columns the site depends on are listed in
+[COLUMN-CONTRACT.md](./COLUMN-CONTRACT.md).
 
-Two things:
+## Adding or renaming a manager
 
-1. **Renaming or deleting a column the site reads.** The full list is in
-   [COLUMN-CONTRACT.md](./COLUMN-CONTRACT.md).
-2. **Inserting or deleting a row above the header row** on one of the data sheets.
-   The site knows the headers are on row 2 of `GameData`, row 3 of `LineupData`,
-   row 4 of `Draft History`, row 2 of `Finishes` and row 2 of `Players`.
+Managers are the one thing the site cannot read from the sheets, because the short
+names collide — two Perkinses, two Malaks, three Joneses, two Joshes. So there is a
+plain-text file listing who is who: `data/managers.yaml`.
 
-If either happens, **nothing breaks publicly.** The update refuses to run, the
-site keeps showing the last good data, and the refresh page tells you exactly which
-column or sheet it could not find. Put the name back, hit refresh, done.
-
-That is deliberate. The alternative — importing blanks over nine years of history
-and quietly publishing it — is the failure mode worth engineering against.
-
-## Changing a manager's name, or adding a new manager
-
-Managers are the one thing the site can't read from the sheets, because the short
-names collide: there are two Perkinses, two Joneses, two Malaks and two Joshes. So
-there's a small file listing who's who: `data/managers.yaml`.
-
-To add a new manager, or a nickname the sheets started using, edit that file. It
-has instructions at the top and is plain text — no code. Each person looks like
-this:
+Each person looks like this:
 
 ```yaml
-  - id: jimmie-perkins
-    canonical_name: Jimmie Perkins
-    display_name: Jimmie
+  - id: josh-baker
+    canonical_name: Josh Baker
+    display_name: Yisha
     confirmed: true
-    leagues: [rbb]
-    aliases: ["Jimmie", "JIMMIE PERKINS"]
+    aliases: ["Yisha", "JOSH BAKER", "Josh Baker"]
+    leagues:
+      - id: rbb
+        first_year: 2016
 ```
 
-`aliases` is every spelling your sheets use for that person. If the site meets a
-name that isn't listed anywhere, it stops and tells you the name — it will never
-guess which person you meant, because guessing wrong would merge two people's
+`aliases` is every spelling your sheets use for that person; `display_name` is what
+the site shows. If the site meets a name that is not listed, it stops and tells you
+which name — it will never guess, because guessing wrong would merge two people's
 records.
 
-## What "provisional" means on a manager's page
+Check it any time:
 
-If a manager still shows as provisional, it means nobody has confirmed which human
-that spreadsheet name belongs to yet. See
-[OPEN-QUESTIONS.md](./OPEN-QUESTIONS.md) — answering questions 1 to 3 clears it.
+```bash
+pnpm --filter @jff/sync check-managers
+```
 
-## If something looks wrong on the site
+## Later, if you want it fully hands-off
 
-Check the refresh page first. It records every update and what it noticed. Most
-problems say plainly what they are: a season with no champion recorded, a game
-missing its opponent's row, a name not in the managers file.
+Updating currently means running one command on a computer. Two future options:
+
+- **A button on the site** — a page you open on your phone that re-reads the Google
+  Sheet and updates the site, no computer needed.
+- **A schedule** — the site re-reads the sheet a few times a day in season, on its
+  own.
+
+Both need the site to read your Google Sheets directly, which is Phase 6. The
+snapshot approach came first because it works today with nothing to set up.

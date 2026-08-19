@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.33.0",
   "engines": {
-    "node": ">=22"
+    "node": ">=20"
   },
   "scripts": {
     "build": "pnpm --filter \"./apps/*\" build",
@@ -15,6 +15,7 @@
     "backfill": "pnpm --filter @jff/sync backfill",
     "migrate": "pnpm --filter @jff/db migrate",
     "dev": "pnpm --filter @jff/rbb dev",
-    "verify": "pnpm --filter @jff/sync run verify"
+    "verify": "pnpm --filter @jff/sync run verify",
+    "snapshot": "pnpm --filter @jff/sync run snapshot"
   }
 }

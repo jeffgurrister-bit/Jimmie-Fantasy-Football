@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { seasonGames, seasonStandings, seasonSummaries } from '@jff/db';
 import { ScrollTable } from '../../../components/Table.tsx';
 import { int, num, ordinal, record } from '../../../lib/format.ts';
+import { seasonGames, seasonStandings, seasonSummary, seasonYears } from '../../../lib/data.ts';
 
-export const dynamic = 'force-dynamic';
+/** Prerenders one page per season at build time. */
+export function generateStaticParams(): Array<{ year: string }> {
+  return seasonYears().map((year) => ({ year: String(year) }));
+}
 
 export default async function SeasonPage({
   params,
@@ -15,12 +18,9 @@ export default async function SeasonPage({
   const year = Number.parseInt(yearParam, 10);
   if (Number.isNaN(year)) notFound();
 
-  const [summaries, standings, games] = await Promise.all([
-    seasonSummaries('rbb'),
-    seasonStandings('rbb', year),
-    seasonGames('rbb', year),
-  ]);
-  const summary = summaries.find((s) => s.year === year);
+  const summary = seasonSummary(year);
+  const standings = seasonStandings(year);
+  const games = seasonGames(year);
   if (!summary && standings.length === 0) notFound();
 
   // Group by week so the results read like a season rather than a flat list.

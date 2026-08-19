@@ -1,26 +1,16 @@
 import Link from 'next/link';
-import {
-  allTimeStandings, champions, isDatabaseConfigured, leagueTotals, titleCounts,
-} from '@jff/db';
-import { NotConnected } from '../components/NotConnected.tsx';
+import { NoData } from '../components/NoData.tsx';
 import { ScrollTable } from '../components/Table.tsx';
 import { int, num, pct, record } from '../lib/format.ts';
+import { champions, hasData, standings as allStandings, titleCounts, totals as leagueTotals } from '../lib/data.ts';
 
-// Rendered per request, never at build time: the site is deployed before the
-// database exists and the build must not depend on it.
-export const dynamic = 'force-dynamic';
+export default function HomePage(): React.ReactElement {
+  if (!hasData()) return <NoData />;
 
-export default async function HomePage(): Promise<React.ReactElement> {
-  const [totals, champs, titles, standings] = await Promise.all([
-    leagueTotals('rbb'),
-    champions('rbb'),
-    titleCounts('rbb'),
-    allTimeStandings('rbb'),
-  ]);
-
-  if (!totals || totals.seasons === 0) {
-    return <NotConnected configured={isDatabaseConfigured()} />;
-  }
+  const totals = leagueTotals();
+  const champs = champions();
+  const titles = titleCounts();
+  const standings = allStandings('regular');
 
   return (
     <>

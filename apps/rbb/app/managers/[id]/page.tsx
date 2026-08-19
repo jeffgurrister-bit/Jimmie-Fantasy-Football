@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { headToHead, managerProfile, managerSeasons } from '@jff/db';
 import { ScrollTable } from '../../../components/Table.tsx';
 import { int, num, ordinal, pct, record } from '../../../lib/format.ts';
+import { manager, managerIds } from '../../../lib/data.ts';
 
-export const dynamic = 'force-dynamic';
+/** Prerenders a page for every manager at build time. */
+export function generateStaticParams(): Array<{ id: string }> {
+  return managerIds().map((id) => ({ id }));
+}
 
 export default async function ManagerPage({
   params,
@@ -12,12 +15,9 @@ export default async function ManagerPage({
   params: Promise<{ id: string }>;
 }): Promise<React.ReactElement> {
   const { id } = await params;
-  const [profile, seasons, h2h] = await Promise.all([
-    managerProfile('rbb', id),
-    managerSeasons('rbb', id),
-    headToHead('rbb', id),
-  ]);
-  if (!profile) notFound();
+  const entry = manager(id);
+  if (!entry) notFound();
+  const { profile, seasons, headToHead: h2h } = entry;
 
   const winPct = profile.wins + profile.losses > 0
     ? profile.wins / (profile.wins + profile.losses)
