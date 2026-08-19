@@ -148,10 +148,41 @@ championship wall.
 
 ## 7. Verify
 
-Visit the deployed URL. If it still says "Not connected to the database yet", the
-variable did not reach the running deployment — check the spelling of
-`DATABASE_URL`, that it is enabled for Production, and that you redeployed
-*after* adding it.
+Run the built-in check against the same `DATABASE_URL` you used above:
+
+```bash
+pnpm verify
+```
+
+It reports on the connection, the schema, the data, the identity map and the last
+sync, and re-checks the one invariant worth confirming on every deployment — that
+the A/B duplication has not doubled any totals:
+
+```
+Deployment check
+
+[  OK  ] DATABASE_URL is set
+           aws-0-us-east-1.pooler.supabase.com:5432 (Supabase session pooler …)
+[  OK  ] Connected to the database
+[  OK  ] Schema applied — 4 migration(s)
+[  OK  ] Data loaded — 9 seasons, 804 games
+           24668 lineup rows, 1494 draft picks, 20 managers
+[  OK  ] Every game has exactly two team rows
+[  OK  ] 8 champion(s) recorded
+[  OK  ] All 20 manager identities confirmed
+[  OK  ] Last sync: success at …
+
+Everything checks out. The site has data and the totals are sound.
+```
+
+**It never prints the connection string or the password**, so the output is safe to
+paste into a chat when asking for help. It names the host and port and tells you
+which pooler you are on, which is usually the thing that is wrong.
+
+Then visit the deployed URL. If it still says "Not connected to the database yet",
+the variable did not reach the running deployment — check the spelling of
+`DATABASE_URL`, that it is enabled for Production, and that you redeployed *after*
+adding it.
 
 ---
 

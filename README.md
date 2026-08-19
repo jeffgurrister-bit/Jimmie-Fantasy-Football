@@ -59,7 +59,9 @@ notice when `DATABASE_URL` is absent. That is deliberate: the deployment pipelin
 has to work before the data does, and a build that needs a database cannot be
 deployed until one exists.
 
-To connect it, follow [docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md).
+To connect it, follow [docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md). Afterwards
+`pnpm verify` reports on the connection, schema, data and totals without ever
+printing the credentials.
 
 When the Dyno Mites site is added, it becomes a second Vercel project with **Root
 Directory** set to `apps/dynomites`.

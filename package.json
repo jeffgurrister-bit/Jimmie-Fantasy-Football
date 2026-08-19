@@ -14,6 +14,7 @@
     "sync": "pnpm --filter @jff/sync sync",
     "backfill": "pnpm --filter @jff/sync backfill",
     "migrate": "pnpm --filter @jff/db migrate",
-    "dev": "pnpm --filter @jff/rbb dev"
+    "dev": "pnpm --filter @jff/rbb dev",
+    "verify": "pnpm --filter @jff/sync run verify"
   }
 }
