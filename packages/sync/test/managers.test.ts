@@ -128,6 +128,81 @@ describe('the confirmation gate', () => {
   });
 });
 
+describe('per-league membership', () => {
+  const YAML = `
+managers:
+  - id: gil-smit
+    canonical_name: Gil Smit
+    display_name: Gil
+    confirmed: true
+    aliases: ["Gil"]
+    leagues:
+      - id: rbb
+        first_year: 2016
+      - id: dm
+        first_year: 2025
+        last_year: 2025
+        active: false
+        franchise: Orland Park Burnt Ends
+  - id: austin-jones
+    canonical_name: Austin Jones
+    display_name: Austin
+    confirmed: true
+    aliases: ["Austin"]
+    leagues: [rbb]
+`;
+
+  it('lets a manager be active in one league and retired from another', () => {
+    // Gil still plays RBB and has retired from Dyno Mites. A single flag on the
+    // manager cannot say that, which is why status lives per league.
+    const map = parseManagerMap(YAML);
+    const gil = map.managers.find((m) => m.id === 'gil-smit')!;
+    expect(gil.leagues.find((l) => l.id === 'rbb')!.active).toBe(true);
+    expect(gil.leagues.find((l) => l.id === 'dm')!.active).toBe(false);
+    // He is still active overall, because one of his leagues is.
+    expect(gil.is_active).toBe(true);
+  });
+
+  it('carries the franchise name on the league, not the manager', () => {
+    // A franchise belongs to a manager-league pairing so it can change hands
+    // without rewriting history. RBB has none.
+    const map = parseManagerMap(YAML);
+    const gil = map.managers.find((m) => m.id === 'gil-smit')!;
+    expect(gil.leagues.find((l) => l.id === 'dm')!.franchise).toBe('Orland Park Burnt Ends');
+    expect(gil.leagues.find((l) => l.id === 'rbb')!.franchise).toBeUndefined();
+  });
+
+  it('accepts the plain shorthand as an active membership', () => {
+    const map = parseManagerMap(YAML);
+    const austin = map.managers.find((m) => m.id === 'austin-jones')!;
+    expect(austin.leagues).toEqual([{ id: 'rbb', active: true }]);
+    expect(austin.is_active).toBe(true);
+  });
+
+  it('lists managers by league', () => {
+    const r = new ManagerResolver(parseManagerMap(YAML));
+    expect(r.inLeague('rbb').map((m) => m.id)).toEqual(['austin-jones', 'gil-smit']);
+    expect(r.inLeague('dm').map((m) => m.id)).toEqual(['gil-smit']);
+  });
+
+  it('treats a manager with no active league as inactive', () => {
+    const map = parseManagerMap(`
+managers:
+  - id: jared-bosi
+    canonical_name: Jared Bosi
+    display_name: Jared
+    confirmed: true
+    aliases: ["Jared"]
+    leagues:
+      - id: rbb
+        first_year: 2016
+        last_year: 2016
+        active: false
+`);
+    expect(map.managers[0]!.is_active).toBe(false);
+  });
+});
+
 describe('the real data/managers.yaml', () => {
   it('parses, and every alias is unambiguous', async () => {
     const text = await readFile(MANAGERS_PATH, 'utf8');
@@ -150,13 +225,52 @@ describe('the real data/managers.yaml', () => {
   });
 
   it('is honest that it is not ready to publish yet', async () => {
-    // The 2018/2022 championship question is still open, so the map must NOT
-    // claim to be clean. If this test ever fails, either Jimmie answered the
-    // questions (good — delete this test) or someone marked a guess as
+    // Only the 2018/2022 championship question remains, so the map must NOT
+    // claim to be clean. If this test fails, either Jimmie confirmed the
+    // Josh/Yisha mapping (good — delete this test) or someone marked a guess as
     // confirmed (bad).
     const text = await readFile(MANAGERS_PATH, 'utf8');
     const resolver = new ManagerResolver(parseManagerMap(text));
     expect(resolver.isCleanForProduction).toBe(false);
-    expect(resolver.unconfirmed.length).toBeGreaterThan(0);
+    expect(resolver.unconfirmed.map((m) => m.id).sort()).toEqual(['josh-baker', 'josh-jones']);
+  });
+
+  it('has all 15 RBB managers and the 13 Dyno Mites franchises', async () => {
+    const text = await readFile(MANAGERS_PATH, 'utf8');
+    const r = new ManagerResolver(parseManagerMap(text), { allowUnconfirmed: true });
+    // Exactly the 15 short names that appear across the RBB workbook.
+    expect(r.inLeague('rbb')).toHaveLength(15);
+    // 12 active Dyno Mites franchises plus Gil Smit, retired after 2025.
+    expect(r.inLeague('dm')).toHaveLength(13);
+    const dmFranchises = r.inLeague('dm').map((m) => r.leagueEntry(m.id, 'dm')!.franchise);
+    expect(dmFranchises.every((f) => typeof f === 'string' && f.length > 0)).toBe(true);
+    expect(new Set(dmFranchises).size).toBe(13);
+  });
+
+  it('keeps the people who share a name or a nickname apart', async () => {
+    const text = await readFile(MANAGERS_PATH, 'utf8');
+    const r = new ManagerResolver(parseManagerMap(text), { allowUnconfirmed: true });
+    const pairs: Array<[string, string]> = [
+      ['Jimmie', 'Jim'],            // two Perkinses
+      ['Josh', 'Yisha'],            // two Joshes
+      ['Joe', 'Joe G.'],            // two Joes
+      ['Jerry', 'Joe'],             // two Malaks
+      ['Josh', 'Austin'],           // two of the three Joneses
+      ['Austin', 'Nick'],           // the third Jones
+      ['Jonathan', 'Jonathan B.'],  // Jawor in RBB vs Barth in DM
+      ['Mike', 'Arturo'],           // two Amezcuas
+    ];
+    for (const [a, b] of pairs) {
+      expect(r.resolve(a, 'test'), `${a} vs ${b}`).not.toBe(r.resolve(b, 'test'));
+    }
+  });
+
+  it('does not let a bare first name resolve to two different people', async () => {
+    // "Jonathan" belongs to Jawor because that is what the RBB sheets call him.
+    // Barth is never bare, so the two can never be confused.
+    const text = await readFile(MANAGERS_PATH, 'utf8');
+    const r = new ManagerResolver(parseManagerMap(text), { allowUnconfirmed: true });
+    expect(r.resolve('Jonathan', 'GameData')).toBe('jonathan-jawor');
+    expect(r.resolve('Jonathan Barth', 'DM')).toBe('jonathan-barth');
   });
 });

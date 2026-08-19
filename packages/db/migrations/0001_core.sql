@@ -32,6 +32,9 @@ create table if not exists managers (
   is_confirmed    boolean not null default false,
   first_year      int,
   last_year       int,                          -- null = still active
+  -- Active in AT LEAST ONE league. Per-league status lives on manager_leagues,
+  -- because a manager can retire from one league and keep playing the other —
+  -- Gil Smit is active in RBB and retired from Dyno Mites.
   is_active       boolean not null default true,
   notes           text,
   created_at      timestamptz not null default now(),
@@ -49,11 +52,25 @@ create table if not exists manager_aliases (
 create unique index if not exists manager_aliases_norm_uniq on manager_aliases (alias_norm);
 create index if not exists manager_aliases_manager_idx on manager_aliases (manager_id);
 
+-- One row per manager per league they play in. This is where per-league identity
+-- and status live: a manager can be active in one league and retired from
+-- another, and Dyno Mites gives its managers franchise names while RBB does not.
 create table if not exists manager_leagues (
-  manager_id  text not null references managers(id) on delete cascade,
-  league_id   text not null references leagues(id)  on delete cascade,
+  manager_id      text not null references managers(id) on delete cascade,
+  league_id       text not null references leagues(id)  on delete cascade,
+  is_active       boolean not null default true,
+  first_year      int,
+  last_year       int,               -- null = still playing in this league
+  -- Dyno Mites franchise, e.g. 'Orland Park Burnt Ends'. Null for RBB, which has
+  -- no franchise names. A franchise belongs to the manager-league pairing rather
+  -- than to the manager, so it can change hands without rewriting history.
+  franchise_name  text,
   primary key (manager_id, league_id)
 );
+create index if not exists manager_leagues_league_idx on manager_leagues (league_id, is_active);
+create unique index if not exists manager_leagues_franchise_uniq
+  on manager_leagues (league_id, franchise_name)
+  where franchise_name is not null;
 
 create table if not exists seasons (
   id                  serial primary key,

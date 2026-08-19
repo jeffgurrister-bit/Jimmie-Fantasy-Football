@@ -3,17 +3,25 @@
 Ordered by how much they block the build. Questions 1–3 change the database
 schema's contents, so they come first.
 
-The sync currently **refuses to load real names** until 1–3 are answered — see
-`data/managers.yaml`. Run `pnpm --filter @jff/sync check-managers` at any time to
-see what is still outstanding.
+**Jimmie has now supplied the full RBB roster and the Dyno Mites franchise table**,
+which resolved questions 2, 3, 11 and 17 outright and reduced the identity blockers
+from nine managers to two. Run `pnpm --filter @jff/sync check-managers` at any time
+to see what is still outstanding.
 
 ---
 
 ## Blocking the first real load
 
-### 1. Is `Yisha` a nickname for Josh Baker, and does bare `Josh` mean Josh Jones?
+### 1. Confirm outright: `Yisha` = Josh Baker, bare `Josh` = Josh Jones — THE LAST BLOCKER
 
-This is the most consequential question in the project.
+**Status: all but confirmed, needs a definite yes.** Jimmie's roster lists Josh
+Baker and Josh Jones as two different people and notes Josh Baker *"might be Yisha
+in there"*. That is the mapping now in `data/managers.yaml` — but "might be" is a
+hedge, and this one point decides who owns two championships on the front page, so
+it stays gated.
+
+Under this mapping **Josh Baker is a two-time champion (2018, 2022)** and **Josh
+Jones won 2019**. Get it backwards and both those facts land on the wrong man.
 
 The Google `Banners` tab and the Excel `Finishes` sheet disagree about two
 championships:
@@ -37,24 +45,20 @@ contradicts that reading — but it is inference, not evidence.
 **Why it matters:** get it backwards and the site credits two championships to
 the wrong man, on the front page, on day one.
 
-### 2. Full name for every alias, plus the years each person played
+### ~~2. Full name for every alias~~ — ANSWERED
 
-Needed for: `Joe G.`, `Trevor`, `Nick`, `Jared` — none of these appear in the
-Google history sheet, which only names champions and division winners.
+Jimmie's roster gave all 15, including the three that were missing: **Trevor
+Manzke**, **Jared Bosi** and **Nick Jones**. All are in `data/managers.yaml` and
+confirmed. The list is exactly 15 names and matches the 15 short names in the
+workbook one-for-one.
 
-Also: `Gregg O'Connor` is named in the Google sheet but matches no short name in
-the Excel. Which name does he play under — or is he a Dyno Mites manager?
+One loose end, not blocking: **`Joe G.` still has no surname** — Jimmie's own list
+also says just "Joe G.", so that may simply be what he goes by.
 
-Already inferred and just needing a yes: Jimmie Perkins, Jim Perkins, Josh Jones,
-Josh Baker, Joe Malak, Jerry Malak, Ryan Hangartner, Austin Jones, Jacob
-Schmiegelt, Jonathan Jawor, Gil Smit.
+### ~~3. Are `Joe G.` and `Joe` the same person?~~ — ANSWERED: no
 
-### 3. Are `Joe G.` (2016 only) and `Joe` (2017 onward) the same person?
-
-The `.G` suffix suggests two different Joes, which would make this a fourth name
-collision alongside the two Perkinses, two Joneses and two Malaks. If they are the
-same person, `Joe G.` should be folded into `joe-malak` in `data/managers.yaml`
-rather than left as a separate entry.
+Jimmie's roster lists **Joe Malak** and **Joe G. (Retired)** as separate entries.
+Two different Joes. Bare `Joe` in the sheets is Joe Malak; `Joe G.` played 2016 only.
 
 ---
 
@@ -199,16 +203,28 @@ Treated as the same person, because the backfill cannot run otherwise. Unlike th
 Josh/Yisha question this one carries little risk: Jacob holds no championship, so a
 wrong guess misattributes draft picks rather than a title. Still worth a yes.
 
-### 17. Where is `Gregg O'Connor` — and did `Joe G.` ever draft?
+### ~~17a. Where is `Gregg O'Connor`?~~ — ANSWERED
 
-Two things the real workbook settled:
+Dyno Mites, running the **Bolingbrook Busters**. Confirmed absent from every sheet
+of the RBB workbook, as the data suggested.
 
-- **`Gregg` appears nowhere in the RBB Excel.** All five sheets contain exactly the
-  same 15 short names and none is Gregg. He is most likely a Dyno Mites manager.
-- **`Joe G.` has no draft picks at all.** He appears in `GameData` (15 games),
-  `LineupData` (235 rows) and `Finishes` (2016), but `Draft History` has only 14
-  names and his is not among them. Did he inherit a roster, join after the draft, or
-  were his picks recorded under another name?
+### 17b. Did `Joe G.` ever draft?
+
+Still open. He appears in `GameData` (15 games), `LineupData` (235 rows) and
+`Finishes` (2016), but `Draft History` holds only 14 names and his is not among
+them. Did he inherit a roster, join after the 2016 draft, or were his picks recorded
+under someone else's name?
+
+### 18. Two Jonathans — does Dyno Mites ever write a bare "Jonathan"?
+
+`Jonathan Jawor` plays RBB and `Jonathan Barth` plays Dyno Mites. The bare alias
+"Jonathan" is assigned to **Jawor**, because that is exactly what the RBB sheets
+call him. Barth is only ever matched on his full name.
+
+If the Dyno Mites sheets use a bare "Jonathan" for Barth, the sync will stop and
+say so rather than guess — at which point the two need distinguishing at the
+source. Same situation with **Mike** and **Arturo Amezcua**, though their first
+names differ so there is no clash.
 
 ### 14. Is `Fixed` on the `Players` sheet the corrected player name?
 

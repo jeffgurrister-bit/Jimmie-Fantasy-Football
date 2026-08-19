@@ -5,24 +5,33 @@
 #  WHY THIS FILE EXISTS
 #  --------------------
 #  The spreadsheets identify managers by short first names ("Jimmie", "Josh",
-#  "Yisha"). Those names collide: there are two Perkinses, two Joneses, two
-#  Malaks and two Joshes in Risky Biscuit Brigade. Nothing in the source data
-#  can tell us which "Josh" is which. If we guess wrong, all-time records and
-#  championship counts get attributed to the wrong human — the most visible
-#  possible way for this site to be wrong.
+#  "Yisha"), and those names collide badly. Across the two leagues there are:
 #
-#  So every manager gets a stable `id` here, and every table in the database
-#  keys off that id, never off a name string.
+#      two Perkinses  — Jimmie and Jim
+#      two Malaks     — Jerry and Joe
+#      three Joneses  — Josh, Austin and Nick
+#      two Joshes     — Josh Jones and Josh Baker
+#      two Joes       — Joe Malak and Joe G.
+#      two Jonathans  — Jonathan Jawor (RBB) and Jonathan Barth (DM)
+#      two Amezcuas   — Mike and Arturo (DM)
+#
+#  Nothing in the source data can tell these people apart. So every manager gets
+#  a stable `id` here, and every table in the database keys off that id, never
+#  off a name string.
 #
 #  HOW THE SYNC USES IT
 #  --------------------
 #  * Every distinct team name in every source sheet MUST appear as an alias
 #    below. If the sync meets a name it cannot resolve, it fails and tells you
 #    which name and which sheet — it never invents a manager or drops a row.
-#  * A manager with `confirmed: false` also fails the sync. Unconfirmed
-#    identities are guesses, and guesses must not reach a public site.
-#    Run with `--allow-unconfirmed` for local preview only; the site badges
-#    those managers as provisional so nobody mistakes them for verified.
+#  * One alias may only ever belong to one manager. Because lookup ignores case
+#    and punctuation, "Joe G." and "joe g" count as the same alias — so the bare
+#    first name goes to whoever the sheets actually use it for, and everyone else
+#    gets their fuller name.
+#  * A manager with `confirmed: false` fails the sync. Unconfirmed identities are
+#    guesses, and guesses must not reach a public site. Run with
+#    `--allow-unconfirmed` for local preview only; the site badges those managers
+#    as provisional.
 #
 #  HOW TO EDIT IT  (this part is for Jimmie)
 #  -----------------------------------------
@@ -33,246 +42,336 @@
 #  4. Change `confirmed: false` to `confirmed: true` once the name is right.
 #  5. Save, then hit the sync button. See docs/HOW-TO-UPDATE.md.
 #
-#  Answering the questions marked  ### NEEDS JIMMIE ###  below is what unblocks
-#  the first real load of the site. See docs/OPEN-QUESTIONS.md.
+#  `leagues` takes either shorthand or the full form:
+#
+#      leagues: [rbb]                        # active, no franchise
+#      leagues:
+#        - id: dm
+#          active: false                     # retired from THIS league only
+#          franchise: Orland Park Burnt Ends
+#
+#  Status is per league on purpose: Gil Smit still plays RBB and has retired from
+#  Dyno Mites.
 #
 # =============================================================================
 
-schema_version: 1
+schema_version: 2
 
 leagues:
   - id: rbb
     name: Risky Biscuit Brigade
     short_name: RBB
     first_year: 2016
-    # 10 managers 2016-2018, 12 from 2019 on.
     identity_display: manager        # RBB has no franchise names
   - id: dm
     name: Dyno Mites
     short_name: DM
     first_year: 2025
-    identity_display: franchise      # ### NEEDS JIMMIE ### q11 — franchise or manager?
+    identity_display: franchise      # DM leads with the franchise name
 
 managers:
 
   # ---------------------------------------------------------------------------
-  #  CONFIRMED — short name and full name agree, and the championship years
-  #  cross-check cleanly between the Google `Banners` tab and Excel `Finishes`.
+  #  RBB — all 15 names confirmed by Jimmie. These are exactly the 15 short
+  #  names that appear across every sheet of RBB_League_History.xlsx.
   # ---------------------------------------------------------------------------
 
   - id: jimmie-perkins
     canonical_name: Jimmie Perkins
     display_name: Jimmie
     confirmed: true
-    leagues: [rbb]
-    first_year: 2016
-    is_active: true
     aliases: ["Jimmie", "JIMMIE PERKINS", "Jimmie Perkins"]
+    leagues:
+      - id: rbb
+        first_year: 2016
+      - id: dm
+        first_year: 2025
+        franchise: Maitland Mateys
     notes: >
-      League commissioner. Champion 2016 and 2021 — agrees in both sources.
-
-  - id: ryan-hangartner
-    canonical_name: Ryan Hangartner
-    display_name: Ryan
-    confirmed: true
-    leagues: [rbb]
-    first_year: 2016
-    is_active: true
-    aliases: ["Ryan", "RYAN HANGARTNER", "Ryan Hangartner"]
-    notes: Champion 2017 and 2020 — agrees in both sources.
-
-  - id: austin-jones
-    canonical_name: Austin Jones
-    display_name: Austin
-    confirmed: true
-    leagues: [rbb]
-    first_year: 2018
-    is_active: true
-    aliases: ["Austin", "AUSTIN JONES", "Austin Jones"]
-    notes: >
-      Joined 2018 — no rows before then. Champion 2023, agrees in both sources.
-
-  - id: jerry-malak
-    canonical_name: Jerry Malak
-    display_name: Jerry
-    confirmed: true
-    leagues: [rbb]
-    first_year: 2016
-    is_active: true
-    aliases: ["Jerry", "JERRY MALAK", "Jerry Malak"]
-
-  - id: gil-smit
-    canonical_name: Gil Smit
-    display_name: Gil
-    confirmed: true
-    leagues: [rbb]
-    first_year: 2016
-    is_active: true
-    aliases: ["Gil", "GIL SMIT", "Gil Smit"]
-
-  - id: jacob-schmiegelt
-    canonical_name: Jacob Schmiegelt
-    display_name: Jacob
-    confirmed: true
-    leagues: [rbb]
-    first_year: 2019
-    is_active: true
-    aliases: ["Jacob", "Jacube", "JACOB SCHMIEGELT", "Jacob Schmiegelt"]
-    notes: >
-      Joined 2019. The draft-side sheets spell him "Jacube" — a joke spelling, not
-      a second person: "Jacob" appears only in the Team columns and "Jacube" only in
-      the Drafted By columns, never both, and his 87 draft picks match Jonathan's and
-      Austin's exactly (all three joined after the league grew).
-      ### CONFIRM WITH JIMMIE ### that "Jacube" is Jacob — low risk, since he holds no
-      championship, but it is an inference. See OPEN-QUESTIONS q16.
-
-  - id: jonathan-jawor
-    canonical_name: Jonathan Jawor
-    display_name: Jonathan
-    confirmed: true
-    leagues: [rbb]
-    first_year: 2019
-    is_active: true
-    aliases: ["Jonathan", "JONATHAN JAWOR", "Jonathan Jawor"]
-    notes: Joined 2019.
-
-  # ---------------------------------------------------------------------------
-  #  UNCONFIRMED — these block the sync until Jimmie signs off.
-  #  Each one is a real ambiguity in the source data, not a typo.
-  # ---------------------------------------------------------------------------
+      League commissioner. RBB champion 2016 and 2021 — agrees in both sources.
+      A different person from Jim Perkins.
 
   - id: jim-perkins
     canonical_name: Jim Perkins
     display_name: Jim
-    confirmed: false
-    leagues: [rbb]
-    first_year: 2016
-    is_active: true
+    confirmed: true
     aliases: ["Jim", "JIM PERKINS", "Jim Perkins"]
+    leagues:
+      - id: rbb
+        first_year: 2016
     notes: >
-      ### NEEDS JIMMIE ###  A different person from Jimmie Perkins — two
-      Perkinses play in this league. Confirm that the bare "Jim" in GameData /
-      LineupData / Finishes always means Jim Perkins and never Jimmie.
-      The Google Banners tab credits Jim Perkins with the 2024 title, but the
-      `Playoff` column in Finishes is blank for all of 2024 (see q5), so that
-      championship cannot be verified against the Excel yet.
+      A different person from Jimmie Perkins. The Google Banners tab credits him
+      with the 2024 title, but the Excel `Finishes` sheet has no 2024 playoff
+      result for him — see OPEN-QUESTIONS q5.
 
   - id: josh-jones
     canonical_name: Josh Jones
     display_name: Josh
     confirmed: false
-    leagues: [rbb]
-    first_year: 2016
-    is_active: true
     aliases: ["Josh", "JOSH JONES", "Josh Jones"]
+    leagues:
+      - id: rbb
+        first_year: 2016
     notes: >
-      ### NEEDS JIMMIE ###  q1 — the most important question in the project.
-      Hypothesis: the bare label "Josh" in the Excel means Josh JONES, and
-      Josh BAKER appears in the Excel under the nickname "Yisha".
-      Evidence: the Google Banners tab credits Josh Baker with 2018 and 2022,
-      and in exactly those two years Finishes shows "Yisha" finishing 1st.
-      Banners credits Josh Jones with 2019, and Finishes shows "Josh" 1st in
-      2019. Both mismatches resolve under this hypothesis and nothing else in
-      the nine seasons contradicts it.
-      If the hypothesis is WRONG and "Josh" is Josh Baker, then mapping it this
-      way hands two championships to the wrong man on the front page.
-      Do not set confirmed: true on this or on josh-baker until Jimmie says so.
+      ### ONE LAST YES NEEDED ###  Jimmie's roster list confirms Josh Jones and
+      Josh Baker are two different people, and notes that Josh Baker "might be
+      Yisha in there" — which is the mapping used here: bare "Josh" is Josh Jones,
+      and "Yisha" is Josh Baker.
+      Everything reconciles under it. The Google Banners tab credits Josh Baker
+      with 2018 and 2022, and in exactly those years `Finishes` shows Yisha 1st;
+      Banners credits Josh Jones with 2019, and `Finishes` shows Josh 1st in 2019.
+      But "might be" is a hedge, and this single point decides who owns two
+      championships on the front page — so it stays gated until confirmed
+      outright. See OPEN-QUESTIONS q1.
 
   - id: josh-baker
     canonical_name: Josh Baker
     display_name: Yisha
     confirmed: false
-    leagues: [rbb]
-    first_year: 2016
-    is_active: true
     aliases: ["Yisha", "JOSH BAKER", "Josh Baker"]
+    leagues:
+      - id: rbb
+        first_year: 2016
+      - id: dm
+        first_year: 2025
+        franchise: Lockport Rivermen
     notes: >
-      ### NEEDS JIMMIE ###  q1, same question as josh-jones above.
-      Assumed champion 2018 and 2022. `display_name` is set to "Yisha" on the
-      assumption he is known by the nickname in the league — if he would rather
-      the site say "Josh Baker", change display_name and keep the alias.
+      ### ONE LAST YES NEEDED ###  q1, the same question as josh-jones above.
+      Assumed RBB champion 2018 and 2022.
+      `display_name` is "Yisha" because that is what the RBB sheets call him and
+      what the league presumably calls him — change it to "Josh Baker" if he would
+      rather the site used his name, and keep the alias either way.
+
+  - id: jacob-schmiegelt
+    canonical_name: Jacob Schmiegelt
+    display_name: Jacob
+    confirmed: true
+    aliases: ["Jacob", "Jacube", "JACOB SCHMIEGELT", "Jacob Schmiegelt"]
+    leagues:
+      - id: rbb
+        first_year: 2019
+      - id: dm
+        first_year: 2025
+        franchise: Rogers Bitch Pigeons
+    notes: >
+      Joined RBB in 2019. The draft-side sheets spell him "Jacube" — a joke
+      spelling, not a second person: "Jacob" appears only in the Team columns and
+      "Jacube" only in the Drafted By columns, never both, and his 87 draft picks
+      match Jonathan's and Austin's exactly. See OPEN-QUESTIONS q16.
+
+  - id: ryan-hangartner
+    canonical_name: Ryan Hangartner
+    display_name: Ryan
+    confirmed: true
+    # Both spellings are carried because they both appear in Jimmie's own lists.
+    aliases: ["Ryan", "RYAN HANGARTNER", "Ryan Hangartner", "Ryan Hangarnter"]
+    leagues:
+      - id: rbb
+        first_year: 2016
+      - id: dm
+        first_year: 2025
+        franchise: The Plymouth Plows
+    notes: >
+      RBB champion 2017 and 2020 — agrees in both sources. Most regular-season
+      wins in league history (77 of 121).
+
+  - id: austin-jones
+    canonical_name: Austin Jones
+    display_name: Austin
+    confirmed: true
+    aliases: ["Austin", "AUSTIN JONES", "Austin Jones"]
+    leagues:
+      - id: rbb
+        first_year: 2018
+    notes: RBB champion 2023. Joined 2018. One of three Joneses.
 
   - id: joe-malak
     canonical_name: Joe Malak
     display_name: Joe
-    confirmed: false
-    leagues: [rbb, dm]
-    first_year: 2017
-    is_active: true
+    confirmed: true
     aliases: ["Joe", "JOE MALAK", "Joe Malak"]
+    leagues:
+      - id: rbb
+        first_year: 2017
+      - id: dm
+        first_year: 2026
+        franchise: Plainfield Pilgrims
     notes: >
-      ### NEEDS JIMMIE ###  q3 — bare "Joe" first appears in 2017, and a
-      separate label "Joe G." appears only in 2016. The ".G" suffix suggests
-      two different Joes, which would make this a fourth name collision.
-      Confirm that "Joe" = Joe Malak, and that he is NOT the same person as
-      "Joe G." below. Google's history credits Joe Malak with the 2025 RBB
-      title (see q4 — 2025 is not in the Excel yet).
+      A different person from Joe G., who played RBB in 2016 only — Jimmie's roster
+      lists them separately. Bare "Joe" in the sheets is Joe Malak.
+      Google's history credits him with the 2025 RBB title (see q4 — 2025 is not in
+      the Excel yet). Joined Dyno Mites in 2026, taking the slot Gil Smit vacated.
+
+  - id: jerry-malak
+    canonical_name: Jerry Malak
+    display_name: Jerry
+    confirmed: true
+    aliases: ["Jerry", "JERRY MALAK", "Jerry Malak"]
+    leagues:
+      - id: rbb
+        first_year: 2016
+      - id: dm
+        first_year: 2025
+        franchise: Homer Hound Dogs
+    notes: Won the 2024 RBB regular season; no playoff result recorded (see q5).
+
+  - id: trevor-manzke
+    canonical_name: Trevor Manzke
+    display_name: Trevor
+    confirmed: true
+    aliases: ["Trevor", "TREVOR MANZKE", "Trevor Manzke"]
+    leagues:
+      - id: rbb
+        first_year: 2016
+      - id: dm
+        first_year: 2025
+        franchise: Tinley Tiger Sharks
+    notes: Played every RBB season — most games of anyone (144).
+
+  - id: jonathan-jawor
+    canonical_name: Jonathan Jawor
+    display_name: Jonathan
+    confirmed: true
+    # Bare "Jonathan" belongs to Jawor because that is what the RBB sheets use.
+    # Jonathan Barth in Dyno Mites is a different person and is never bare.
+    aliases: ["Jonathan", "JONATHAN JAWOR", "Jonathan Jawor"]
+    leagues:
+      - id: rbb
+        first_year: 2019
+    notes: Joined RBB in 2019. Not to be confused with Jonathan Barth in Dyno Mites.
+
+  - id: gil-smit
+    canonical_name: Gil Smit
+    display_name: Gil
+    confirmed: true
+    aliases: ["Gil", "GIL SMIT", "Gil Smit"]
+    leagues:
+      - id: rbb
+        first_year: 2016
+      - id: dm
+        first_year: 2025
+        last_year: 2025
+        active: false
+        franchise: Orland Park Burnt Ends
+    notes: >
+      Still playing RBB, retired from Dyno Mites after 2025 — which is why league
+      status is per league rather than a single flag on the manager. Joe Malak took
+      his Dyno Mites slot in 2026.
+
+  # ---------------------------------------------------------------------------
+  #  RBB — retired. Kept in full: all-time records include them, and the UI
+  #  should mark them inactive rather than hide them.
+  # ---------------------------------------------------------------------------
 
   - id: joe-g
-    canonical_name: "### NEEDS JIMMIE ### full name for 'Joe G.'"
+    canonical_name: Joe G.
     display_name: Joe G.
-    confirmed: false
-    leagues: [rbb]
-    first_year: 2016
-    last_year: 2016
-    is_active: false
+    confirmed: true
     aliases: ["Joe G."]
+    leagues:
+      - id: rbb
+        first_year: 2016
+        last_year: 2016
+        active: false
     notes: >
-      ### NEEDS JIMMIE ###  q2, q3. Appears in 2016 only, then leaves.
-      No full name for him anywhere in the sources we have. Is he a different
-      person from "Joe" (Joe Malak)? If they are the SAME person, delete this
-      entry and move the "Joe G." alias onto joe-malak — do not leave both.
+      Played RBB 2016 only, then retired. A different person from Joe Malak.
+      Surname still unknown — Jimmie's roster lists him as "Joe G." too, so this
+      may simply be what he goes by. He has no rows at all in `Draft History`
+      despite playing 2016; see OPEN-QUESTIONS q17.
 
-  - id: trevor
-    canonical_name: "### NEEDS JIMMIE ### full name for 'Trevor'"
-    display_name: Trevor
-    confirmed: false
-    leagues: [rbb]
-    first_year: 2016
-    is_active: true
-    aliases: ["Trevor"]
-    notes: >
-      ### NEEDS JIMMIE ###  q2. Plays in the Excel data but has no full name in
-      the Google history sheet — that sheet only names champions and division
-      winners, so absence there is expected, not suspicious.
-
-  - id: nick
-    canonical_name: "### NEEDS JIMMIE ### full name for 'Nick'"
-    display_name: Nick
-    confirmed: false
-    leagues: [rbb]
-    first_year: 2017
-    last_year: 2017
-    is_active: false
-    aliases: ["Nick"]
-    notes: "### NEEDS JIMMIE ### q2. 2017 only, then leaves."
-
-  - id: jared
-    canonical_name: "### NEEDS JIMMIE ### full name for 'Jared'"
+  - id: jared-bosi
+    canonical_name: Jared Bosi
     display_name: Jared
-    confirmed: false
-    leagues: [rbb]
-    first_year: 2016
-    last_year: 2016
-    is_active: false
-    aliases: ["Jared"]
-    notes: "### NEEDS JIMMIE ### q2. 2016 only, then leaves."
+    confirmed: true
+    aliases: ["Jared", "JARED BOSI", "Jared Bosi"]
+    leagues:
+      - id: rbb
+        first_year: 2016
+        last_year: 2016
+        active: false
+    notes: Played RBB 2016 only (15 games), then retired.
+
+  - id: nick-jones
+    canonical_name: Nick Jones
+    display_name: Nick
+    confirmed: true
+    aliases: ["Nick", "NICK JONES", "Nick Jones"]
+    leagues:
+      - id: rbb
+        first_year: 2017
+        last_year: 2017
+        active: false
+    notes: Played RBB 2017 only (15 games), then retired. One of three Joneses.
+
+  # ---------------------------------------------------------------------------
+  #  Dyno Mites only. Confirmed from the franchise table; none of these names
+  #  appear anywhere in the RBB workbook.
+  # ---------------------------------------------------------------------------
 
   - id: gregg-oconnor
     canonical_name: Gregg O'Connor
     display_name: Gregg
-    confirmed: false
-    leagues: [rbb]
-    is_active: true
-    aliases: ["Gregg", "GREGG O'CONNOR", "Gregg O'Connor", "Greg"]
+    confirmed: true
+    aliases: ["Gregg", "Greg", "GREGG O'CONNOR", "Gregg O'Connor"]
+    leagues:
+      - id: dm
+        first_year: 2025
+        franchise: Bolingbrook Busters
     notes: >
-      ### NEEDS JIMMIE ###  q2. Now known NOT to appear anywhere in the RBB Excel:
-      all five sheets contain exactly the same 15 short names, and none of them is
-      Gregg. So he is either a Dyno Mites manager — most likely — or he plays RBB
-      under a nickname already mapped to someone else. He gets a managers row but no
-      RBB seasons, which is harmless either way.
-      Both "Gregg" and "Greg" are listed because the spelling is inconsistent;
-      harmless to keep both.
+      Dyno Mites only — confirmed absent from every sheet of the RBB workbook,
+      which contains exactly the 15 RBB names above. Both spellings are carried
+      because the sources are inconsistent.
+
+  - id: mike-amezcua
+    canonical_name: Mike Amezcua
+    display_name: Mike
+    confirmed: true
+    aliases: ["Mike", "Mike Amezcua", "MIKE AMEZCUA"]
+    leagues:
+      - id: dm
+        first_year: 2025
+        franchise: Chicago Crazy Monkeys
+    notes: One of two Amezcuas in Dyno Mites; Arturo is the other.
+
+  - id: arturo-amezcua
+    canonical_name: Arturo Amezcua
+    display_name: Arturo
+    confirmed: true
+    aliases: ["Arturo", "Arturo Amezcua", "ARTURO AMEZCUA"]
+    leagues:
+      - id: dm
+        first_year: 2025
+        franchise: Chicago Mud Dawgs
+    notes: One of two Amezcuas in Dyno Mites; Mike is the other.
+
+  - id: jonathan-barth
+    canonical_name: Jonathan Barth
+    display_name: Jonathan B.
+    confirmed: true
+    # Deliberately NOT given the bare "Jonathan": that alias belongs to Jonathan
+    # Jawor, whom the RBB sheets call exactly that. If the Dyno Mites sheets use a
+    # bare "Jonathan" for Barth, the sync will stop and say so rather than guess —
+    # at which point the two need distinguishing at the source.
+    aliases: ["Jonathan Barth", "JONATHAN BARTH", "Jonathan B."]
+    leagues:
+      - id: dm
+        first_year: 2025
+        franchise: Louisville Morning Chubb
+    notes: >
+      Dyno Mites only. A different person from Jonathan Jawor in RBB —
+      `display_name` is "Jonathan B." so the two never read as the same man if
+      both ever appear on one page.
+
+  - id: andrew-obannon
+    canonical_name: Andrew O'Bannon
+    display_name: Andrew
+    confirmed: true
+    aliases: ["Andrew", "Andrew O'Bannon", "ANDREW O'BANNON"]
+    leagues:
+      - id: dm
+        first_year: 2025
+        franchise: Oklahoma Ball Fondlers
+    notes: Dyno Mites only.
 
 # =============================================================================
 #  OPEN IDENTITY QUESTIONS — the sync prints these when it refuses to run.
@@ -284,25 +383,8 @@ unresolved:
   - id: q1-yisha-is-josh-baker
     blocks: [josh-jones, josh-baker]
     question: >
-      Is "Yisha" the nickname of Josh Baker, and does the bare "Josh" in the
-      Excel mean Josh Jones? This decides who owns the 2018 and 2022 titles.
-  - id: q2-full-names
-    blocks: [joe-g, trevor, nick, jared, gregg-oconnor]
-    question: >
-      Full legal/display name for each of: Joe G., Trevor, Nick, Jared, and
-      which short name Gregg O'Connor plays under.
-  - id: q3-two-joes
-    blocks: [joe-malak, joe-g]
-    question: >
-      Are "Joe G." (2016 only) and "Joe" (2017 onward) the same person?
-  - id: q4-2025-data
-    blocks: []
-    question: >
-      Where does 2025 RBB game and lineup data live? The Excel stops at 2024
-      but the Google sheet already shows a 2025 champion.
-  - id: q5-2024-postseason
-    blocks: [jim-perkins]
-    question: >
-      The `Playoff` and `Finals` columns in Finishes are blank for every 2024
-      row, so 2024 has no verifiable champion on the Excel side. Where are
-      those results?
+      Confirm outright that "Yisha" in the RBB sheets is Josh Baker, and that the
+      bare "Josh" is Josh Jones. Jimmie's roster note says Josh Baker "might be
+      Yisha in there", and every other source agrees — but this decides who owns
+      the 2018 and 2022 championships, so it needs a definite yes rather than a
+      "might".

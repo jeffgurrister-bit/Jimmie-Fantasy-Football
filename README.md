@@ -40,7 +40,7 @@ Corollaries, which are enforced in code rather than left to discipline:
 | `packages/db` | Postgres schema (4 migrations), migration runner, row types |
 | `packages/sync` | Column contract, fail-loud validation, xlsx + Google Sheets readers, transforms, idempotent loader, CLI |
 | `docs/` | Column contract (generated), open questions, data model, how-to-update guide |
-| Tests | 121 passing — unit, end-to-end against real Postgres, and 11 against the real workbook |
+| Tests | 129 passing — unit, end-to-end against real Postgres, and 11 against the real workbook |
 | `apps/rbb`, `apps/dynomites`, `packages/ui` | **Not built yet** — see below |
 
 ### Not built yet
@@ -133,24 +133,33 @@ identity is unconfirmed. That is expected today — see below.
 
 ## Before this can go live
 
-`data/managers.yaml` deliberately blocks a real sync. The sheets identify managers
-by short first names, and those names collide: two Perkinses, two Joneses, two
-Malaks, two Joshes. Cross-referencing the Google `Banners` tab against the Excel
-`Finishes` sheet shows the 2018 and 2022 championships landing on different names in
-each source, which resolves *if* `Yisha` is Josh Baker's nickname and bare `Josh` is
-Josh Jones — but that is inference.
+**One question left.** Jimmie has supplied the full RBB roster and the Dyno Mites
+franchise table, so 18 of 20 manager identities are confirmed. All 20 people are
+mapped, across both leagues, with 13 Dyno Mites franchises.
 
-Guess it wrong and the site credits two championships to the wrong man on the front
-page. So the sync refuses to load unverified identities rather than picking one:
+What remains is the Josh/Yisha mapping. The roster confirms Josh Jones and Josh
+Baker are different people and notes Josh Baker *"might be Yisha in there"* — which
+is the mapping in place, and every source agrees with it. But under it **Josh Baker
+is a two-time champion (2018, 2022)** and **Josh Jones won 2019**, so a hedge is not
+enough:
 
 ```
 $ pnpm --filter @jff/sync check-managers
-9 of 16 manager identities are not confirmed yet: ...
-Open questions blocking a verified launch: ...
+2 of 20 manager identities are not confirmed yet:
+  - Josh (Josh Jones)
+  - Yisha (Josh Baker)
 ```
 
-`--allow-unconfirmed` overrides it for local preview, and flags those managers as
+`--allow-unconfirmed` overrides it for local preview and flags those two as
 provisional. See [docs/OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md).
+
+### Names collide, so nothing keys off them
+
+Across the two leagues: two Perkinses, two Malaks, **three** Joneses, two Joshes,
+two Joes, two Jonathans and two Amezcuas. Every table keys off `managers.id` from
+the hand-authored map, and the map refuses to let one alias belong to two people.
+League status is per league — Gil Smit still plays RBB and has retired from Dyno
+Mites.
 
 ## Documentation
 

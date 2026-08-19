@@ -155,12 +155,27 @@ async function loadManagers(client: PoolClient, payload: LoadPayload): Promise<n
     { conflictTarget: '(alias_norm)', updateColumns: ['alias', 'manager_id'] },
   );
 
-  const leagueRows = payload.managers
-    .filter((m) => m.leagues.includes(payload.leagueId))
-    .map((m) => ({ manager_id: m.id, league_id: payload.leagueId }));
-  await batchInsert(client, 'manager_leagues', ['manager_id', 'league_id'], leagueRows, {
-    conflictTarget: '(manager_id, league_id)',
+  // Only this league's rows are touched, so syncing RBB never disturbs a
+  // manager's Dyno Mites record.
+  const leagueRows = payload.managers.flatMap((m) => {
+    const entry = m.leagues.find((l) => l.id === payload.leagueId);
+    if (!entry) return [];
+    return [{
+      manager_id: m.id,
+      league_id: payload.leagueId,
+      is_active: entry.active,
+      first_year: entry.first_year ?? m.first_year ?? null,
+      last_year: entry.last_year ?? m.last_year ?? null,
+      franchise_name: entry.franchise ?? null,
+    }];
   });
+  await batchInsert(
+    client,
+    'manager_leagues',
+    ['manager_id', 'league_id', 'is_active', 'first_year', 'last_year', 'franchise_name'],
+    leagueRows,
+    { conflictTarget: '(manager_id, league_id)' },
+  );
 
   return rows.length;
 }

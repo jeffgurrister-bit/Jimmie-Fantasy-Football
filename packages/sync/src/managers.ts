@@ -8,14 +8,30 @@ import { normalizeName } from './parse.ts';
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 export const MANAGERS_PATH = join(REPO_ROOT, 'data', 'managers.yaml');
 
+/**
+ * A manager's participation in one league.
+ *
+ * Per-league rather than per-manager because status genuinely differs by league:
+ * Gil Smit is active in RBB and retired from Dyno Mites. Franchise names live here
+ * too — Dyno Mites has them, RBB does not.
+ */
+export interface ManagerLeague {
+  id: string;
+  active: boolean;
+  first_year?: number;
+  last_year?: number;
+  franchise?: string;
+}
+
 export interface ManagerDef {
   id: string;
   canonical_name: string;
   display_name: string;
   confirmed: boolean;
-  leagues: string[];
+  leagues: ManagerLeague[];
   first_year?: number;
   last_year?: number;
+  /** Active in at least one league. Derived from `leagues` when not given. */
   is_active: boolean;
   aliases: string[];
   notes?: string;
@@ -71,11 +87,14 @@ export function parseManagerMap(text: string): ManagerMap {
           `exactly as the sheets spell it — otherwise no source row can ever match him.`,
       );
     }
+    const leagues = normalizeLeagues(m.leagues, m.id);
     return {
       ...m,
       confirmed: m.confirmed === true,
-      is_active: m.is_active !== false,
-      leagues: m.leagues ?? [],
+      leagues,
+      // A manager counts as active if any of their leagues does. Stated
+      // explicitly only when there is a reason to override.
+      is_active: m.is_active ?? leagues.some((l) => l.active),
     } as ManagerDef;
   });
 
@@ -115,6 +134,34 @@ export function parseManagerMap(text: string): ManagerMap {
     managers,
     unresolved: doc.unresolved ?? [],
   };
+}
+
+/**
+ * Accepts either shorthand or the full form, so the file stays pleasant to edit
+ * by hand:
+ *
+ *   leagues: [rbb]                            # shorthand: active, no franchise
+ *   leagues:
+ *     - id: dm
+ *       active: false
+ *       franchise: Orland Park Burnt Ends
+ */
+function normalizeLeagues(raw: unknown, managerId: string): ManagerLeague[] {
+  if (raw === null || raw === undefined) return [];
+  if (!Array.isArray(raw)) {
+    throw new SyncError(`\`leagues\` for "${managerId}" must be a list.`);
+  }
+  return raw.map((entry) => {
+    if (typeof entry === 'string') return { id: entry, active: true };
+    const e = entry as Partial<ManagerLeague>;
+    if (!e.id) {
+      throw new SyncError(
+        `A league entry for "${managerId}" has no \`id\`. Use the league's short ` +
+          `code, e.g. "rbb" or "dm".`,
+      );
+    }
+    return { ...e, id: e.id, active: e.active !== false } as ManagerLeague;
+  });
 }
 
 export interface ResolverOptions {
@@ -177,6 +224,17 @@ export class ManagerResolver {
 
   get all(): readonly ManagerDef[] {
     return this.map.managers;
+  }
+
+  /** Managers who play in the given league, in display-name order. */
+  inLeague(leagueId: string): ManagerDef[] {
+    return this.map.managers
+      .filter((m) => m.leagues.some((l) => l.id === leagueId))
+      .sort((a, b) => a.display_name.localeCompare(b.display_name));
+  }
+
+  leagueEntry(managerId: string, leagueId: string): ManagerLeague | undefined {
+    return this.byId.get(managerId)?.leagues.find((l) => l.id === leagueId);
   }
 
   get unconfirmed(): readonly ManagerDef[] {
