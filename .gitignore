@@ -1,0 +1,20 @@
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+
+.env
+.env.local
+.env*.local
+!.env.example
+
+# Source workbooks are the commissioner's system of record; they are large and
+# private. Keep them out of git — point the backfill at a local path instead.
+*.xlsx
+*.xlsm
+!docs/fixtures/**/*.xlsx
+
+.DS_Store
+.vercel
+coverage/
