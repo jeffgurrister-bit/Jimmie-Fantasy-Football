@@ -26,6 +26,13 @@ function pairingsFor(week: number): Array<[string, string]> {
     : [['Jimmie', 'Josh'], ['Jim', 'Yisha']];
 }
 
+/** Formats a draft slot the way the sheet does: 1 -> "1st". */
+function ordinalOf(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+}
+
 function row(headers: readonly string[], values: Record<string, unknown>): unknown[] {
   return headers.map((h) => values[h] ?? null);
 }
@@ -88,8 +95,10 @@ function buildGameData(): unknown[][] {
               'Year Rank': 1,
               'Game Played': 'YES',
               'Made Playoff': 'YES',
-              'Wk Hi': 'NO',
-              'Drafted From': 'Draft',
+              'Wk Hi': team === home ? 'HIGH' : null,
+              'Drafted From': ordinalOf(
+                MANAGERS.indexOf(team as (typeof MANAGERS)[number]) + 1,
+              ),
             }),
           );
         }
@@ -143,8 +152,12 @@ function buildLineupData(): unknown[][] {
                 'Keeper': 'NO',
                 'Played Y/N': slot.pos === 'BN' ? 'NO' : 'YES',
                 'Reason': slot.reason,
-                'Best BN over STRT': slot.pos === 'BN' ? 12.5 : null,
-                'BN Gap': slot.pos === 'BN' ? 3.5 : null,
+                // Mirrors the real workbook: the flag is 0/1, the magnitude
+                // lives in BN Gap, and Max Bench holds the bench player's points.
+                'Best BN over STRT': slot.pos === 'BN' ? 1 : 0,
+                'Players above Min': slot.pos === 'BN' ? 1 : 0,
+                'Max Bench': slot.pos === 'BN' ? 24.5 : null,
+                'BN Gap': slot.pos === 'BN' ? 12.5 : null,
                 'Opponent': opp,
                 'Score': scoreFor(team, year, week),
                 'Opp. Score': scoreFor(opp, year, week),
@@ -256,6 +269,8 @@ export function buildWorkbook(): XLSX.WorkBook {
 
 /** Counts the fixture is expected to produce, asserted by the e2e test. */
 export const EXPECTED = {
+  /** The bench-regret magnitude the fixture puts on every bench row. */
+  benchGap: 12.5,
   years: YEARS.length,
   managers: MANAGERS.length,
   /** 2 weeks x 2 pairings x 2 years. */

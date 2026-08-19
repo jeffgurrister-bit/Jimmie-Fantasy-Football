@@ -23,10 +23,20 @@ export interface SheetSource {
  * of loose integers at index 1 as well — reading row 0 yields headers like "5"
  * and "11" and produces a clean-looking import of complete garbage.
  */
-export async function readSheet(
-  source: SheetSource,
-  spec: SheetSpec,
-): Promise<{ headers: string[]; rows: SourceRow[] }> {
+export interface SheetRead {
+  headers: string[];
+  rows: SourceRow[];
+  /** Fully blank rows skipped — spacer rows and trailing empties. */
+  blankRows: number;
+  /**
+   * Rows that held something but had no value in the key column. These are the
+   * formula-scaffolding rows below the real data. Counted so the run can report
+   * them rather than hiding the fact that rows were skipped.
+   */
+  scaffoldingRows: number;
+}
+
+export async function readSheet(source: SheetSource, spec: SheetSpec): Promise<SheetRead> {
   const grid = await source.readGrid(spec.sheetName);
 
   const headerCells = grid[spec.headerRow];
@@ -50,13 +60,38 @@ export async function readSheet(
   // rather than thousands of null-value errors.
   assertHeaders(spec, headers);
 
+  const keyIndex = headers.indexOf(spec.keyColumn);
+  if (keyIndex === -1) {
+    throw new SyncError(
+      `The "${spec.sheetName}" sheet has no "${spec.keyColumn}" column, which is what ` +
+        `identifies a row as real data.`,
+      { sheet: spec.sheetName, column: spec.keyColumn },
+    );
+  }
+
   const rows: SourceRow[] = [];
+  let blankRows = 0;
+  let scaffoldingRows = 0;
+
   for (let r = spec.headerRow + 1; r < grid.length; r += 1) {
     const cells = grid[r];
-    if (!cells) continue;
+    if (!cells) {
+      blankRows += 1;
+      continue;
+    }
     // Skip rows that are entirely blank — hand-maintained sheets accumulate
     // trailing empties and spacer rows.
-    if (cells.every((c) => c === null || c === undefined || String(c).trim() === '')) continue;
+    if (cells.every((c) => c === null || c === undefined || String(c).trim() === '')) {
+      blankRows += 1;
+      continue;
+    }
+    // Skip rows that hold something but have no identity. These are the formula
+    // rows dragged one past the data, holding sentinels like "__" and zeros.
+    const key = cells[keyIndex];
+    if (key === null || key === undefined || String(key).trim() === '') {
+      scaffoldingRows += 1;
+      continue;
+    }
 
     const row: SourceRow = {};
     for (let c = 0; c < headers.length; c += 1) {
@@ -69,5 +104,5 @@ export async function readSheet(
     rows.push(row);
   }
 
-  return { headers, rows };
+  return { headers, rows, blankRows, scaffoldingRows };
 }

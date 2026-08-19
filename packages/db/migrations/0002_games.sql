@@ -80,19 +80,25 @@ create table if not exists game_teams (
   opp_weekly_rank     int,
   year_rank           int,
   made_playoff        boolean,
-  drafted_from        text,      -- a filter dimension in his own Game Pivot
-  placed_regular      text,
-  placed_playoff      text,
-  placed_div_conf     text,
-  -- The six high/low markers. Held as text on purpose: the source may spell
-  -- them as YES/NO flags or as numeric values and we have not yet seen real
-  -- values to confirm which. Text is lossless either way. See OPEN-QUESTIONS q13.
-  week_high           text,
-  week_low            text,
-  season_high         text,
-  season_low          text,
-  career_high         text,
-  career_low          text,
+  -- The draft slot this team picked from that year (1-12). Spelled as an ordinal
+  -- in the sheet; a filter dimension in his own Game Pivot.
+  drafted_from        int,
+  placed_regular      int,
+  placed_playoff      int,
+  placed_div_conf     int,
+  -- The six high/low markers. The sheet spells these "HIGH"/"LOW" when they apply
+  -- and leaves them blank otherwise, so they are flags. Verified against the
+  -- workbook: season_high is set on exactly 102 rows — one per team-season — and
+  -- career_high on only 15 across nine seasons.
+  --
+  -- These are the records book's fastest queries: the highest score in league
+  -- history is `where career_high` rather than a sort over 1,608 rows.
+  week_high           boolean not null default false,
+  week_low            boolean not null default false,
+  season_high         boolean not null default false,
+  season_low          boolean not null default false,
+  career_high         boolean not null default false,
+  career_low          boolean not null default false,
 
   unique (game_id, team_season_id)
 );
@@ -101,6 +107,11 @@ create index if not exists game_teams_game_idx      on game_teams (game_id);
 create index if not exists game_teams_opponent_idx  on game_teams (opponent_team_season_id);
 create index if not exists game_teams_score_idx     on game_teams (score desc);
 create index if not exists game_teams_seed_idx      on game_teams (seed);
+-- Partial indexes for the records book: only a handful of rows are marked, so
+-- these stay tiny and answer "best game ever" without scanning.
+create index if not exists game_teams_career_high_idx on game_teams (score desc) where career_high;
+create index if not exists game_teams_career_low_idx  on game_teams (score) where career_low;
+create index if not exists game_teams_week_high_idx   on game_teams (game_id) where week_high;
 
 -- Use this instead of joining games to game_teams by hand. One row per team per
 -- game with the season, manager and matchup context already attached, so

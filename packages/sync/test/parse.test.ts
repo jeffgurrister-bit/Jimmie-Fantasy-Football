@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { int, normalizeName, num, ordinal, str, toOrdinal, yesNo } from '../src/parse.ts';
+import { highLow, int, normalizeName, num, ordinal, str, toOrdinal, yesNo } from '../src/parse.ts';
 
 describe('ordinal', () => {
   it('parses the ordinal strings the Finishes sheet uses', () => {
@@ -91,6 +91,40 @@ describe('yesNo', () => {
     // `Game Played` drives whether a row counts as a played game. Silently
     // reading "MAYBE" as false would quietly drop games from every total.
     expect(() => yesNo('MAYBE')).toThrow(/Expected YES or NO/);
+  });
+});
+
+describe('highLow', () => {
+  it('reads the HIGH/LOW markers as flags', () => {
+    // Verified against the workbook: these columns hold the literal words, and
+    // `Sea Hi` is set on exactly 102 rows — one per team-season.
+    expect(highLow('HIGH')).toBe(true);
+    expect(highLow('LOW')).toBe(true);
+    expect(highLow('high')).toBe(true);
+  });
+
+  it('treats blank as "not a high or low" rather than unknown', () => {
+    expect(highLow('')).toBe(false);
+    expect(highLow(null)).toBe(false);
+  });
+
+  it('raises on an unexpected value instead of reading it as false', () => {
+    expect(() => highLow('MEDIUM')).toThrow(/HIGH/);
+  });
+});
+
+describe('num — sentinel dashes', () => {
+  it('treats an en-dash or em-dash as no value, not as text', () => {
+    // The workbook uses an en-dash (–) in one points cell. It is not the ASCII
+    // hyphen, so it would otherwise fail as unparseable text.
+    expect(num('\u2013')).toBeNull();
+    expect(num('\u2014')).toBeNull();
+    expect(num('-')).toBeNull();
+  });
+
+  it('treats Excel error values as no value', () => {
+    expect(num('#VALUE!')).toBeNull();
+    expect(num('#REF!')).toBeNull();
   });
 });
 

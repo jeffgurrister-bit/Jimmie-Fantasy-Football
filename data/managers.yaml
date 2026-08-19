@@ -117,8 +117,14 @@ managers:
     leagues: [rbb]
     first_year: 2019
     is_active: true
-    aliases: ["Jacob", "JACOB SCHMIEGELT", "Jacob Schmiegelt"]
-    notes: Joined 2019.
+    aliases: ["Jacob", "Jacube", "JACOB SCHMIEGELT", "Jacob Schmiegelt"]
+    notes: >
+      Joined 2019. The draft-side sheets spell him "Jacube" — a joke spelling, not
+      a second person: "Jacob" appears only in the Team columns and "Jacube" only in
+      the Drafted By columns, never both, and his 87 draft picks match Jonathan's and
+      Austin's exactly (all three joined after the league grew).
+      ### CONFIRM WITH JIMMIE ### that "Jacube" is Jacob — low risk, since he holds no
+      championship, but it is an inference. See OPEN-QUESTIONS q16.
 
   - id: jonathan-jawor
     canonical_name: Jonathan Jawor
@@ -260,12 +266,13 @@ managers:
     is_active: true
     aliases: ["Gregg", "GREGG O'CONNOR", "Gregg O'Connor", "Greg"]
     notes: >
-      ### NEEDS JIMMIE ###  q2. Named in the Google history sheet but we have
-      not matched him to any short name in the Excel. Either he plays under a
-      nickname we have not identified — add it to `aliases` — or he is a
-      Dyno Mites manager rather than RBB, in which case fix `leagues`.
-      Both "Gregg" and "Greg" are listed as aliases because the spelling is
-      inconsistent across the sheets; harmless to keep both.
+      ### NEEDS JIMMIE ###  q2. Now known NOT to appear anywhere in the RBB Excel:
+      all five sheets contain exactly the same 15 short names, and none of them is
+      Gregg. So he is either a Dyno Mites manager — most likely — or he plays RBB
+      under a nickname already mapped to someone else. He gets a managers row but no
+      RBB seasons, which is harmless either way.
+      Both "Gregg" and "Greg" are listed because the spelling is inconsistent;
+      harmless to keep both.
 
 # =============================================================================
 #  OPEN IDENTITY QUESTIONS — the sync prints these when it refuses to run.

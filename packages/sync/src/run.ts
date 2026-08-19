@@ -66,6 +66,23 @@ export async function runRbbSync(options: RunOptions): Promise<RunResult> {
     onProgress('Reading Players…');
     const playersData = await readSheet(source, PLAYERS);
 
+    // Rows skipped for having no identity are reported, not hidden. A jump in
+    // this count is the signal that something changed in the sheet's shape.
+    for (const [spec, read] of [
+      [GAME_DATA, gameData], [LINEUP_DATA, lineupData], [DRAFT_HISTORY, draftData],
+      [FINISHES, finishesData], [PLAYERS, playersData],
+    ] as const) {
+      if (read.scaffoldingRows > 0) {
+        warnings.push({
+          code: 'scaffolding_rows_skipped',
+          message:
+            `Skipped ${read.scaffoldingRows} row(s) in ${spec.sheetName} that had no ` +
+            `"${spec.keyColumn}" value — these are the formula rows below the real data.`,
+          context: { sheet: spec.sheetName, skipped: read.scaffoldingRows, imported: read.rows.length },
+        });
+      }
+    }
+
     // --- transform ----------------------------------------------------------
     onProgress('Building seasons and teams…');
     const seasons = transformSeasons(FINISHES, finishesData.rows, resolver);

@@ -40,7 +40,7 @@ Corollaries, which are enforced in code rather than left to discipline:
 | `packages/db` | Postgres schema (4 migrations), migration runner, row types |
 | `packages/sync` | Column contract, fail-loud validation, xlsx + Google Sheets readers, transforms, idempotent loader, CLI |
 | `docs/` | Column contract (generated), open questions, data model, how-to-update guide |
-| Tests | 97 passing — 88 unit plus 9 end-to-end against a real Postgres |
+| Tests | 121 passing — unit, end-to-end against real Postgres, and 11 against the real workbook |
 | `apps/rbb`, `apps/dynomites`, `packages/ui` | **Not built yet** — see below |
 
 ### Not built yet
@@ -49,30 +49,47 @@ The read-only sites themselves (phases 2–5 of the build plan), the
 `/admin/sync` page and its cron trigger (phase 6), and the Dyno Mites–specific
 tables' sync. The schema for all of it is in place.
 
-### What has and has not been verified
+### Verified against the real workbook
 
-**Verified.** The pipeline runs end-to-end. A synthetic workbook that mimics the
-real one's shape — same header strings, same banner rows above the headers,
-`LineupData`'s row of loose integers at index 1, every game stored twice via the
-A/B column — is read, validated, transformed and loaded into a real Postgres 16,
-and the invariants are asserted: 8 source games become 8 game rows and 16 team
-rows (not 16 and 32), every game has exactly two sides, per-manager totals are not
-doubled, wins across the league equal games played, blank finishes stay null rather
-than becoming last place, divisions attach only to the seasons that had them, and
-three consecutive syncs leave every count unchanged.
+The full `RBB_League_History.xlsx` has been loaded. **Zero column drift** — all five
+sheets matched the contract with nothing missing or unexpected, and every declared
+header-row index was correct.
 
-That end-to-end run caught two real bugs, both now fixed: `sync_runs` referencing a
-`leagues` row that did not exist yet, and alias spellings that collapse to the same
-normalised key (`"JIMMIE PERKINS"` and `"Jimmie Perkins"`) violating uniqueness.
+| | |
+| --- | --- |
+| Seasons | 9 (2016–2024) |
+| Games | 804 unique from 1,608 rows — the A/B column is perfectly balanced 804/804 |
+| Team-seasons | 102 |
+| Lineup rows | 24,668 |
+| Draft picks | 1,494 |
+| Full backfill | ~20 seconds |
 
-**Not verified.** The real workbook is not in this repository and
-`docs.google.com` was unreachable from the environment this was built in, so the
-sync has **not** been run against the actual sources. The column maps are authored
-from the documented inspection of the workbook, and a test asserts that the full
-transcribed header inventory of all five sheets — 60 / 65 / 14 / 15 / 5 columns —
-validates against the maps with nothing missing or unexpected. But the first run
-against the genuine file is still the first run. If something is off, the header
-validator is what will say so, by name, which is what it is for.
+Every game has exactly two sides, no orphans, no unrecognised A/B values, and no
+`Reason`/roster-slot contradictions across all 24,668 lineup rows.
+
+Loading it corrected five things the handoff notes had wrong or unknown — see
+[docs/OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md):
+
+- The six `Wk Hi`/`Car Lo`-style columns are **flags** holding the words `HIGH`/`LOW`,
+  not numbers. `career_high` is set on exactly 15 rows — one per manager — and the
+  all-time high score is exactly the row flagged. Now booleans with partial indexes.
+- **`Best BN over STRT` is a 0/1 flag, not a magnitude.** `BN Gap` carries the points
+  margin, and is what the bench-regret leaderboard must sort on.
+- **`Drafted From` is the draft slot** (`1st`–`12th`), not free text. Slot 1 wins
+  57.9% of regular-season games; slot 10 wins 40.5%.
+- **`Undrafted`** fills `Round Drafted` and `Drafted By` on 6,734 rows, and **`Bye`**
+  fills the points columns on 173. Declared as sentinels.
+- **2024's postseason is half-entered** — 4 of 12 teams have results, and the eight
+  missing ones are the top of the table.
+
+**Still not verified:** the Google Sheets. `docs.google.com` is blocked by this
+environment's network policy, so the weekly-sync path and the hidden tabs on that
+side remain untested. The Excel has no hidden tabs — all 10 are visible.
+
+Three real bugs were caught by running against actual data rather than by
+typechecking: `sync_runs` referencing a `leagues` row that did not exist yet, alias
+spellings colliding after normalisation (`"JIMMIE PERKINS"` / `"Jimmie Perkins"`),
+and the formula-scaffolding row at the bottom of each sheet.
 
 ## Getting started
 
@@ -101,6 +118,15 @@ pnpm migrate && pnpm test
 
 It skips itself unless `DATABASE_URL` points at localhost, so `pnpm test` stays safe
 to run anywhere.
+
+To run the checks against the real workbook, point at your copy:
+
+```bash
+RBB_WORKBOOK_PATH=/path/to/RBB_League_History.xlsx pnpm test
+```
+
+These also skip when the variable is unset — the workbook is private and is not
+committed.
 
 `check-managers` exits non-zero and lists what is outstanding while any manager
 identity is unconfirmed. That is expected today — see below.

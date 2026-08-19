@@ -44,14 +44,22 @@ create table if not exists lineup_slots (
   games_played_count int,
 
   -- ---- imported bench-mismanagement metrics — DO NOT RECOMPUTE -------------
-  -- These power the "you left 30 points on your bench" leaderboard. They encode
-  -- the commissioner's definitions of the same.
-  pos_rank_that_week      int,
-  pos_rank_with_bench     int,
-  players_above_min       numeric(7,2),
+  -- Verified against the real workbook. Note which of these are flags and which
+  -- are magnitudes; the handoff notes had it the other way round.
+  --
+  --   bench_gap               THE bench-regret number: points the bench beat the
+  --                           starter by. -32.00 to 46.45, on 4,287 rows. Sort on
+  --                           this for "left 30 points on the bench".
+  --   max_bench               points scored by the best bench player, on the
+  --                           2,469 rows where one beat a starter.
+  --   best_bench_over_starter a FLAG that a bench player beat a starter (2,469).
+  --   players_above_min       a FLAG, set on 4,432 rows.
+  pos_rank_that_week      int,        -- 1-35, starters only
+  pos_rank_with_bench     int,        -- 1-72, including bench
+  players_above_min       boolean,
   max_bench               numeric(7,2),
   bench_gap               numeric(7,2),
-  best_bench_over_starter numeric(7,2),
+  best_bench_over_starter boolean,
 
   -- ---- draft provenance, denormalised onto every lineup row by the source ---
   -- `drafted_by_manager_id` can differ from the row's own manager: the player
@@ -60,7 +68,7 @@ create table if not exists lineup_slots (
   round_drafted         int,
   pick_drafted          text,      -- '1.01'/'1.1' style; string on purpose, see 0004 note
   drafted_by_manager_id text references managers(id) on delete set null,
-  drafted_from          text,
+  drafted_from          int,       -- draft slot this team picked from (1-12)
   is_keeper             boolean not null default false,
   keep_year             int,
 
@@ -75,11 +83,11 @@ create index if not exists lineup_position_idx         on lineup_slots (lineup_p
 create index if not exists lineup_started_idx          on lineup_slots (was_started);
 create index if not exists lineup_round_drafted_idx    on lineup_slots (round_drafted);
 create index if not exists lineup_points_idx           on lineup_slots (points desc);
--- Partial index for the bench-regret queries, which only ever look at benched
--- players with a positive gap over the starter.
+-- Partial index for the bench-regret queries. Sorted on bench_gap, which is the
+-- magnitude; best_bench_over_starter is only a flag and cannot be ranked.
 create index if not exists lineup_bench_regret_idx
-  on lineup_slots (best_bench_over_starter desc)
-  where was_started = false;
+  on lineup_slots (bench_gap desc)
+  where bench_gap is not null;
 
 create table if not exists draft_picks (
   id          serial primary key,

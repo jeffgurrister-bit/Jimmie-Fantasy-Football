@@ -116,6 +116,60 @@ describe('critical source quirks are encoded in the map', () => {
   });
 });
 
+describe('every sheet declares a usable key column', () => {
+  it('names a key column that is actually one of its mapped columns', () => {
+    // The key column decides which rows are real data. If it were not mapped,
+    // the reader could not find it and the sheet would fail to load.
+    for (const spec of ALL_SHEETS) {
+      const sources = spec.columns.map((c) => c.source);
+      expect(sources, `${spec.sheetName} key "${spec.keyColumn}"`).toContain(spec.keyColumn);
+    }
+  });
+
+  it('uses the identity column rather than the first column', () => {
+    // Column 0 is scratch on three of these sheets — `LIST` on Finishes is
+    // populated on only 12 of 102 rows, and Draft History's first column is
+    // unnamed. Keying on position would silently drop most of the data.
+    expect(FINISHES.keyColumn).toBe('ID');
+    expect(DRAFT_HISTORY.keyColumn).toBe('PLAYER ID');
+    expect(GAME_DATA.keyColumn).toBe('Name_Yr_Wk');
+  });
+});
+
+describe('semantics verified against the real workbook', () => {
+  it('treats the six high/low markers as flags, not text or numbers', () => {
+    for (const source of ['Wk Hi', 'Wk Lo', 'Sea Hi', 'Sea Lo', 'Car Hi', 'Car Lo']) {
+      expect(GAME_DATA.columns.find((c) => c.source === source)!.kind).toBe('highlow');
+    }
+  });
+
+  it('reads Drafted From as an ordinal draft slot, not free text', () => {
+    expect(GAME_DATA.columns.find((c) => c.source === 'Drafted From')!.kind).toBe('ordinal');
+  });
+
+  it('treats the two bench flags as flags and BN Gap as the magnitude', () => {
+    // The handoff notes had this backwards: `Best BN over STRT` is a 0/1 flag on
+    // 2,469 rows, and `BN Gap` carries the actual points margin. Sorting on the
+    // flag would produce a meaningless leaderboard.
+    const col = (src: string) => LINEUP_DATA.columns.find((c) => c.source === src)!;
+    expect(col('Best BN over STRT').kind).toBe('yesno');
+    expect(col('Players above Min').kind).toBe('yesno');
+    expect(col('BN Gap').kind).toBe('number');
+    expect(col('Max Bench').kind).toBe('number');
+  });
+
+  it('declares the sentinel words the sheets use for "no value"', () => {
+    const col = (src: string) => LINEUP_DATA.columns.find((c) => c.source === src)!;
+    // 6,734 rows say "Undrafted" where a round number would go, and "Undrafted"
+    // is also not a manager.
+    expect(col('Round Drafted').sentinels).toContain('Undrafted');
+    expect(col('Drafted By').sentinels).toContain('Undrafted');
+    // 173 rows say "Bye" where points would go — matching Reason = "Bye" exactly.
+    expect(col('PTS').sentinels).toContain('Bye');
+    expect(col('PPG').sentinels).toContain('Bye');
+  });
+});
+
 describe('schema drift', () => {
   it('fails when a column is renamed, naming the column that vanished', () => {
     const renamed = GAME_DATA_HEADERS.map((h) => (h === 'Proj. Score' ? 'Projected Score' : h));

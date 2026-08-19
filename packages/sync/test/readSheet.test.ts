@@ -64,6 +64,37 @@ describe('readSheet', () => {
     expect(rows[0]!.__rowNumber).toBe(3);
   });
 
+  it('skips formula-scaffolding rows that have no key value, and counts them', async () => {
+    // GameData's real last row looks like this: sentinels and zeros dragged one
+    // row past the data. It is not blank, so "skip blank rows" misses it, and
+    // importing it would add a phantom record.
+    const grid = [
+      ['PLAYERS'],
+      ['POS', 'Name', 'Name Count', 'Draft Count', 'Fixed'],
+      ['WR', 'Antonio Brown', 3, 1, null],
+      ['__', null, 0, 0, null], // scaffolding: no Name
+      ['QB', 'Josh Allen', 2, 1, null],
+    ];
+    const read = await readSheet(gridSource(grid), PLAYERS);
+    expect(read.rows).toHaveLength(2);
+    expect(read.scaffoldingRows).toBe(1);
+    expect(read.rows.map((r) => r['Name'])).toEqual(['Antonio Brown', 'Josh Allen']);
+  });
+
+  it('counts fully blank rows separately from scaffolding rows', async () => {
+    const grid = [
+      ['PLAYERS'],
+      ['POS', 'Name', 'Name Count', 'Draft Count', 'Fixed'],
+      ['WR', 'Antonio Brown', 3, 1, null],
+      [null, null, null, null, null],
+      ['__', null, 0, 0, null],
+    ];
+    const read = await readSheet(gridSource(grid), PLAYERS);
+    expect(read.rows).toHaveLength(1);
+    expect(read.blankRows).toBe(1);
+    expect(read.scaffoldingRows).toBe(1);
+  });
+
   it('fails before reading data when a column has been renamed', async () => {
     const grid = [
       ['PLAYERS'],

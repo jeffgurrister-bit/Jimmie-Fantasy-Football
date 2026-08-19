@@ -124,12 +124,17 @@ describe.skipIf(!shouldRun)('end-to-end sync against Postgres', () => {
   });
 
   it('imports the bench metrics rather than recomputing them', async () => {
-    const rows = await query<{ n: string; max: number | null }>(
-      `select count(*)::text n, max(best_bench_over_starter) max
+    // bench_gap is the magnitude; best_bench_over_starter is only a flag. Ranking
+    // on the flag would give a meaningless leaderboard, so the distinction is
+    // asserted here.
+    const rows = await query<{ n: string; max: number | null; flagged: string }>(
+      `select count(*)::text n, max(bench_gap) max,
+              count(*) filter (where best_bench_over_starter)::text flagged
        from lineup_slots where was_started = false`,
     );
     expect(Number(rows[0]!.n)).toBeGreaterThan(0);
-    expect(Number(rows[0]!.max)).toBeCloseTo(12.5);
+    expect(Number(rows[0]!.max)).toBeCloseTo(EXPECTED.benchGap);
+    expect(Number(rows[0]!.flagged)).toBeGreaterThan(0);
   });
 
   it('is idempotent — a second sync changes no counts', async () => {

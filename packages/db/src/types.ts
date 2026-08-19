@@ -90,7 +90,15 @@ export interface GameTeam {
   year_rank: number | null;
   win_streak: number | null;
   loss_streak: number | null;
-  drafted_from: string | null;
+  /** Draft slot this team picked from that year (1-12). */
+  drafted_from: number | null;
+  /** Marker flags imported from the sheet — the records book reads these. */
+  week_high: boolean;
+  week_low: boolean;
+  season_high: boolean;
+  season_low: boolean;
+  career_high: boolean;
+  career_low: boolean;
 }
 
 export interface LineupSlot {
@@ -114,7 +122,9 @@ export interface LineupSlot {
   drafted_by_manager_id: string | null;
   is_keeper: boolean;
   keep_year: number | null;
-  best_bench_over_starter: number | null;
+  /** A flag that a bench player beat a starter — not the margin. */
+  best_bench_over_starter: boolean | null;
+  /** The bench-regret magnitude: points the bench beat the starter by. */
   bench_gap: number | null;
 }
 

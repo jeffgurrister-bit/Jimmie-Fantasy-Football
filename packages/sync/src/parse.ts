@@ -13,7 +13,10 @@ export function num(value: unknown, ctx?: { sheet: string; column: string; row: 
   // Strip thousands separators, currency, and stray whitespace, and read
   // parenthesised negatives — all three show up in hand-maintained sheets.
   const raw = String(value).trim();
-  if (raw === '' || raw === '-' || raw === '#N/A' || raw === '#DIV/0!') return null;
+  // A lone dash means "no value". The sheet uses an en-dash (–) in at least one
+  // place, which is not the ASCII hyphen and would otherwise read as text.
+  if (raw === '' || raw === '-' || raw === '\u2013' || raw === '\u2014') return null;
+  if (raw === '#N/A' || raw === '#DIV/0!' || raw === '#VALUE!' || raw === '#REF!') return null;
   const negated = /^\((.*)\)$/.exec(raw);
   const body = (negated?.[1] ?? raw).replace(/[$,\s]/g, '');
   const parsed = Number.parseFloat(body);
@@ -48,6 +51,31 @@ export function yesNo(
   throw new SyncError(`Expected YES or NO but found "${s}".`, {
     ...ctx,
     hint: 'Use YES or NO in this column, or tell the developer a new value is now valid.',
+  });
+}
+
+/**
+ * The six high/low marker columns hold the literal text "HIGH" or "LOW" when the
+ * marker applies, and are blank otherwise — so they are flags, not values. The
+ * counts confirm it: `Sea Hi` is set on exactly 102 rows, which is exactly the
+ * number of team-seasons, i.e. one season high per team per year.
+ *
+ * Blank means "not a high/low", which is false rather than unknown.
+ */
+export function highLow(
+  value: unknown,
+  ctx?: { sheet: string; column: string; row: number },
+): boolean {
+  const s = str(value);
+  if (s === null) return false;
+  const up = s.toUpperCase();
+  if (up === 'HIGH' || up === 'LOW' || up === 'YES') return true;
+  if (up === 'NO') return false;
+  throw new SyncError(`Expected "HIGH", "LOW" or blank but found "${s}".`, {
+    ...ctx,
+    hint:
+      'These columns mark whether a score was a weekly, season or career high or low. ' +
+      'Leave the cell blank when it is not one.',
   });
 }
 

@@ -70,14 +70,22 @@ Is 2025 in the Google sheet only, not yet pulled into Excel? The sync reports th
 newest season it found in each source and warns when they disagree, rather than
 silently preferring one — but it cannot load data that is not there.
 
-### 5. 2024 postseason results are blank in `Finishes`
+### 5. 2024 postseason results are only half entered
 
-Every 2024 row has empty `Playoff` and `Finals` values, so on the Excel side 2024
-has no champion at all. The Google banner credits Jim Perkins. Where are the real
-2024 postseason results?
+**Refined against the real workbook.** It is not that all of 2024 is blank —
+4 of the 12 teams have results and 8 do not, and it is the *top* of the table that
+is missing:
 
-Until this is resolved the site can show 2024's regular season but not its
-playoffs, and `pnpm check-managers` will keep reporting it.
+| Has a 2024 result | Missing a 2024 result |
+| --- | --- |
+| Ryan (5th), Austin (6th), Trevor (11th), Josh (12th) | Jerry, Jim, Yisha, Jacob, Jimmie, Jonathan, Joe, Gil |
+
+Jerry finished 1st in the 2024 regular season and Jim 2nd, and neither has a
+playoff finish recorded. The Google banner credits Jim Perkins with the title.
+
+So the eight consolation-bracket placings went in and the eight playoff-bracket
+placings did not. **The site can show all of 2024's regular season and none of its
+postseason until those eight `Playoff` cells are filled in.**
 
 ---
 
@@ -135,23 +143,83 @@ people play in both.
 
 ---
 
+## Answered by loading the real workbook
+
+Recorded here so nobody re-asks them:
+
+- **The A/B column is perfectly balanced** — 804 `A` and 804 `B`, giving 804 unique
+  games and 1,608 team-rows, with no orphans and no unrecognised sides.
+- **Nine seasons, 102 team-seasons**, 10 managers in 2016–2018 and 12 from 2019.
+- **Divisions exist in 2016, 2023 and 2024 only** — confirmed genuine, not missing.
+- **`Reason` never contradicts the roster slot** across all 24,668 lineup rows, so
+  "was this player started" is unambiguous.
+- **`Drafted From` is the draft slot the team picked from** (`1st`–`12th`), not free
+  text. Drafting first is worth it: slot 1 wins 57.9% of regular-season games,
+  slot 10 wins 40.5%.
+- **`Best BN over STRT` and `Players above Min` are 0/1 flags, not magnitudes.**
+  The handoff had this backwards. `BN Gap` is the points margin (−32.00 to 46.45)
+  and is what the bench-regret leaderboard must sort on. The worst call in league
+  history: Joe benching De'Von Achane's 55.35 points in 2023 week 3, a 46.45 gap.
+- **`Undrafted` fills `Round Drafted` and `Drafted By` on 6,734 lineup rows** —
+  waiver pickups, not a manager. **`Bye` fills the points columns on 173 rows**,
+  matching `Reason = Bye` exactly.
+- **Each sheet carries formula scaffolding below the data** (`GameData` and
+  `Players` have one such row each), which is skipped by key and reported.
+- **There are no hidden tabs in the Excel** — all 10 are visible. Any hidden tabs
+  are on the Google Sheets side, which q9 still covers.
+
 ## Questions raised while building, not in the original handoff
 
-### 13. What do `Wk Hi`, `Wk Lo`, `Sea Hi`, `Sea Lo`, `Car Hi`, `Car Lo` contain?
+### ~~13. What do `Wk Hi`, `Wk Lo`, `Sea Hi`, `Sea Lo`, `Car Hi`, `Car Lo` contain?~~ — ANSWERED
 
-Are these YES/NO flags marking "this game was a career high", or the numeric high
-and low values themselves? They are currently imported as raw text, which is
-lossless either way but cannot be sorted or filtered until narrowed. Once we know,
-they become the records book's fastest queries.
+They hold the literal words `HIGH` and `LOW`, and are blank otherwise. They are
+**flags**, and the counts prove it:
 
-The same question applies to `Placed (Reg. S.)`, `Placed (Playoff)` and
-`Placed (Div/ Conf)`.
+| Column | Rows set | Meaning |
+| --- | --- | --- |
+| `Wk Hi` / `Wk Lo` | 155 each | one per week across nine seasons |
+| `Sea Hi` / `Sea Lo` | 102 each | one per team-season |
+| `Car Hi` / `Car Lo` | 15 each | one per manager — a career-best game |
+
+Cross-checked: the highest score in the whole table (Yisha, 210.57, 2019 week 1) is
+exactly the row flagged `Car Hi`. They are now stored as booleans with partial
+indexes, so "best game in league history" is an index lookup rather than a sort.
+
+`Placed (Reg. S.)`, `Placed (Playoff)` and `Placed (Div/ Conf)` turned out to be
+ordinals (`1st`–`12th`) and are stored as integers.
+
+### 16. Is `Jacube` your Jacob? — needs a yes, but low risk
+
+The draft-side sheets spell him **`Jacube`** (1,027 lineup rows, 87 draft picks)
+while the team-side sheets say **`Jacob`**. Never both: `Jacob` appears only in
+`Team` columns, `Jacube` only in `Drafted By` columns, and `Jacube`'s 87 picks match
+Jonathan's and Austin's exactly — all three joined after the league grew.
+
+Treated as the same person, because the backfill cannot run otherwise. Unlike the
+Josh/Yisha question this one carries little risk: Jacob holds no championship, so a
+wrong guess misattributes draft picks rather than a title. Still worth a yes.
+
+### 17. Where is `Gregg O'Connor` — and did `Joe G.` ever draft?
+
+Two things the real workbook settled:
+
+- **`Gregg` appears nowhere in the RBB Excel.** All five sheets contain exactly the
+  same 15 short names and none is Gregg. He is most likely a Dyno Mites manager.
+- **`Joe G.` has no draft picks at all.** He appears in `GameData` (15 games),
+  `LineupData` (235 rows) and `Finishes` (2016), but `Draft History` has only 14
+  names and his is not among them. Did he inherit a roster, join after the draft, or
+  were his picks recorded under another name?
 
 ### 14. Is `Fixed` on the `Players` sheet the corrected player name?
 
 It reads like a manual override for misspelled names. It is currently ignored per
 the original brief. If it is the corrected name, it should become the canonical
 one — worth confirming, because player name quality drives the lineup explorer.
+
+Related, from the real data: the `Players` sheet lists 777 names, but lineups and
+drafts reference names it does not carry, so the sync folds those in and ends up
+with 825 players. The sheet is a working table, not a complete index — which is
+what the brief said, now confirmed.
 
 ### 15. Do `Place/Yr` and `Reg/Yr` on `Finishes` hold display strings to reuse?
 

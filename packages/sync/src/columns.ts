@@ -36,6 +36,7 @@ export const GAME_DATA: SheetSpec = {
   key: 'GameData',
   sheetName: 'GameData',
   headerRow: HEADER_ROWS.GameData,
+  keyColumn: 'Name_Yr_Wk',
   description:
     'Every game, stored twice — once from each team\'s perspective. The A/B column ' +
     'says which side a row is. Filter to A/B = "A" for unique games; use every row ' +
@@ -76,22 +77,27 @@ export const GAME_DATA: SheetSpec = {
     { source: 'Division', field: 'division', kind: 'string',
       note: 'Populated for 2016, 2023 and 2024 only. Blank 2017-2022 is expected, not missing data.' },
     { source: 'Opp. Division', field: 'opp_division', kind: 'string' },
-    // The six high/low markers. Held as raw text until we have seen real values:
-    // they may be YES/NO flags or numeric values, and guessing wrong either
-    // loses data or crashes the sync. See OPEN-QUESTIONS q13.
-    { source: 'Wk Hi', field: 'week_high', kind: 'raw' },
-    { source: 'Wk Lo', field: 'week_low', kind: 'raw' },
-    { source: 'Sea Hi', field: 'season_high', kind: 'raw' },
-    { source: 'Sea Lo', field: 'season_low', kind: 'raw' },
-    { source: 'Car Hi', field: 'career_high', kind: 'raw' },
-    { source: 'Car Lo', field: 'career_low', kind: 'raw' },
-    { source: 'Placed (Reg. S.)', field: 'placed_regular', kind: 'raw' },
-    { source: 'Placed (Playoff)', field: 'placed_playoff', kind: 'raw' },
-    { source: 'Placed (Div/ Conf)', field: 'placed_div_conf', kind: 'raw' },
+    // The six high/low markers hold the text "HIGH" or "LOW" when they apply and
+    // are blank otherwise, so they are flags. Confirmed against the workbook:
+    // `Sea Hi` is set on exactly 102 rows, one per team-season.
+    { source: 'Wk Hi', field: 'week_high', kind: 'highlow',
+      note: 'Set on 155 rows — the highest score of that week.' },
+    { source: 'Wk Lo', field: 'week_low', kind: 'highlow' },
+    { source: 'Sea Hi', field: 'season_high', kind: 'highlow' },
+    { source: 'Sea Lo', field: 'season_low', kind: 'highlow' },
+    { source: 'Car Hi', field: 'career_high', kind: 'highlow',
+      note: 'Set on only 15 rows across nine seasons — a career-best game.' },
+    { source: 'Car Lo', field: 'career_low', kind: 'highlow' },
+    // The three "Placed" columns are ordinals (1st-12th), not free text.
+    { source: 'Placed (Reg. S.)', field: 'placed_regular', kind: 'ordinal' },
+    { source: 'Placed (Playoff)', field: 'placed_playoff', kind: 'ordinal' },
+    { source: 'Placed (Div/ Conf)', field: 'placed_div_conf', kind: 'ordinal' },
     { source: 'Record @ Game', field: 'record_at_game', kind: 'string' },
     { source: 'Opp. Rec. @ Game', field: 'opp_record_at_game', kind: 'string' },
-    { source: 'Drafted From', field: 'drafted_from', kind: 'string',
-      note: 'A filter dimension in the commissioner\'s own Game Pivot.' },
+    { source: 'Drafted From', field: 'drafted_from', kind: 'ordinal',
+      note:
+        'The draft slot this team picked from that year, spelled as an ordinal ' +
+        '(1st-12th). A filter dimension in the commissioner\'s own Game Pivot.' },
     { source: 'W@G', field: 'wins_at_game', kind: 'int' },
     { source: 'L@G', field: 'losses_at_game', kind: 'int' },
     { source: 'Opp W@G', field: 'opp_wins_at_game', kind: 'int' },
@@ -126,6 +132,7 @@ export const LINEUP_DATA: SheetSpec = {
   key: 'LineupData',
   sheetName: 'LineupData',
   headerRow: HEADER_ROWS.LineupData,
+  keyColumn: 'Name_Yr_Wk',
   description:
     'One row per roster slot per team per week, with bench points and draft ' +
     'provenance denormalised onto every row. Header row is index 2 — index 1 ' +
@@ -147,24 +154,41 @@ export const LINEUP_DATA: SheetSpec = {
       note: 'QB | RB | WR | TE | FLEX | K | DEF | BN | IR. BN is bench, IR is injured reserve.' },
     { source: 'Name', field: 'player_name', kind: 'string' },
     { source: 'POS', field: 'player_position', kind: 'string' },
-    { source: 'PTS', field: 'points', kind: 'number' },
-    { source: 'Proj PTS', field: 'projected_points', kind: 'number' },
-    { source: 'Diff', field: 'diff', kind: 'number' },
-    { source: 'Round Drafted', field: 'round_drafted', kind: 'int' },
+    // A player on bye has the word "Bye" where his points would be. That is
+    // information, not corruption — `Reason` says "Bye" on exactly these 173 rows.
+    { source: 'PTS', field: 'points', kind: 'number', sentinels: ['Bye'] },
+    { source: 'Proj PTS', field: 'projected_points', kind: 'number', sentinels: ['Bye'] },
+    { source: 'Diff', field: 'diff', kind: 'number', sentinels: ['Bye'] },
+    // 6,734 lineup rows hold "Undrafted" here — a player picked up off waivers
+    // rather than drafted. `Pick Drafted` keeps the word itself, so the fact is
+    // not lost when the round becomes null.
+    { source: 'Round Drafted', field: 'round_drafted', kind: 'int', sentinels: ['Undrafted'] },
     { source: 'Pick Drafted', field: 'pick_drafted', kind: 'string',
       note: 'String, not number: "1.1" and "1.10" collide numerically.' },
-    { source: 'Drafted By', field: 'drafted_by', kind: 'string',
+    // "Undrafted" fills this on 6,734 rows: nobody drafted the player, he came off
+    // waivers. Read as no-manager rather than resolved as a name.
+    { source: 'Drafted By', field: 'drafted_by', kind: 'string', sentinels: ['Undrafted'],
       note: 'Can differ from Team — the player was drafted elsewhere and acquired later.' },
     { source: 'Keeper', field: 'keeper', kind: 'string', note: 'Keeper | NO' },
     { source: 'Keep Year', field: 'keep_year', kind: 'int' },
     // Pre-computed bench-mismanagement metrics. Imported, never recalculated.
     { source: 'Pos Rank That Week', field: 'pos_rank_that_week', kind: 'int' },
     { source: 'Pos Rank W/BN', field: 'pos_rank_with_bench', kind: 'int' },
-    { source: 'Players above Min', field: 'players_above_min', kind: 'number' },
-    { source: 'Max Bench', field: 'max_bench', kind: 'number' },
-    { source: 'BN Gap', field: 'bench_gap', kind: 'number' },
-    { source: 'Best BN over STRT', field: 'best_bench_over_starter', kind: 'number',
-      note: 'Powers the bench-regret leaderboard. His definition, not ours.' },
+    // Verified against the workbook: this is a 0/1 flag on 2,469 rows, NOT a
+    // magnitude — it marks a row where a bench player beat a starter.
+    { source: 'Players above Min', field: 'players_above_min', kind: 'yesno',
+      note: 'A 0/1 flag, set on 4,432 rows.' },
+    { source: 'Max Bench', field: 'max_bench', kind: 'number',
+      note: 'Points scored by the best bench player. Only filled on the 2,469 flagged rows.' },
+    { source: 'BN Gap', field: 'bench_gap', kind: 'number',
+      note:
+        'THE bench-regret number: how many points the bench beat the starter by. ' +
+        'Real values from -32.00 to 46.45 on 4,287 rows. This is what the ' +
+        '"left 30 points on the bench" leaderboard sorts on.' },
+    { source: 'Best BN over STRT', field: 'best_bench_over_starter', kind: 'yesno',
+      note:
+        'A 0/1 flag marking that a bench player outscored a starter — not the margin. ' +
+        'The margin is `BN Gap`.' },
     { source: 'Flex Eligible', field: 'flex_eligible', kind: 'string' },
     { source: 'GP Count', field: 'games_played_count', kind: 'int' },
     { source: 'Played Y/N', field: 'played', kind: 'yesno' },
@@ -186,17 +210,17 @@ export const LINEUP_DATA: SheetSpec = {
     { source: 'Favorite/ Underdog', field: 'favorite_or_underdog', kind: 'string' },
     { source: 'Division', field: 'division', kind: 'string' },
     { source: 'Opp. Division', field: 'opp_division', kind: 'string' },
-    { source: 'Wk Hi', field: 'week_high', kind: 'raw' },
-    { source: 'Wk Lo', field: 'week_low', kind: 'raw' },
-    { source: 'Sea Hi', field: 'season_high', kind: 'raw' },
-    { source: 'Sea Lo', field: 'season_low', kind: 'raw' },
-    { source: 'Car Hi', field: 'career_high', kind: 'raw' },
-    { source: 'Car Lo', field: 'career_low', kind: 'raw' },
-    { source: 'Placed (Reg. S.)', field: 'placed_regular', kind: 'raw' },
-    { source: 'Placed (Playoff)', field: 'placed_playoff', kind: 'raw' },
-    { source: 'Drafted From', field: 'drafted_from', kind: 'string' },
-    { source: 'Placed (Div/ Conf)', field: 'placed_div_conf', kind: 'raw' },
-    { source: 'PPG', field: 'ppg', kind: 'number' },
+    { source: 'Wk Hi', field: 'week_high', kind: 'highlow' },
+    { source: 'Wk Lo', field: 'week_low', kind: 'highlow' },
+    { source: 'Sea Hi', field: 'season_high', kind: 'highlow' },
+    { source: 'Sea Lo', field: 'season_low', kind: 'highlow' },
+    { source: 'Car Hi', field: 'career_high', kind: 'highlow' },
+    { source: 'Car Lo', field: 'career_low', kind: 'highlow' },
+    { source: 'Placed (Reg. S.)', field: 'placed_regular', kind: 'ordinal' },
+    { source: 'Placed (Playoff)', field: 'placed_playoff', kind: 'ordinal' },
+    { source: 'Drafted From', field: 'drafted_from', kind: 'ordinal' },
+    { source: 'Placed (Div/ Conf)', field: 'placed_div_conf', kind: 'ordinal' },
+    { source: 'PPG', field: 'ppg', kind: 'number', sentinels: ['Bye'] },
     { source: 'Game #', field: 'game_number', kind: 'int' },
     { source: 'YEAR_WK', field: 'year_wk', kind: 'string' },
     { source: 'W %', field: 'win_pct', kind: 'number' },
@@ -215,6 +239,7 @@ export const DRAFT_HISTORY: SheetSpec = {
   key: 'DraftHistory',
   sheetName: 'Draft History',
   headerRow: HEADER_ROWS['Draft History'],
+  keyColumn: 'PLAYER ID',
   description:
     'Every draft pick. Use the cleaned `Name` column, not `Player` — the latter ' +
     'arrives as a combined string like "WR - Antonio Brown - PIT". Order by OVR, ' +
@@ -250,6 +275,7 @@ export const FINISHES: SheetSpec = {
   key: 'Finishes',
   sheetName: 'Finishes',
   headerRow: HEADER_ROWS.Finishes,
+  keyColumn: 'ID',
   description:
     'Season-level finish per team per year. `Playoff` is the champion indicator: ' +
     'Playoff = "1st" means that team won the league. Finishes are ordinal strings ' +
@@ -261,7 +287,8 @@ export const FINISHES: SheetSpec = {
     { source: 'Year', field: 'year', kind: 'int', requireValue: true },
     { source: 'Name', field: 'team', kind: 'string', requireValue: true },
     { source: 'Division', field: 'division', kind: 'string' },
-    { source: 'Draft Slot', field: 'draft_slot', kind: 'int' },
+    { source: 'Draft Slot', field: 'draft_slot', kind: 'ordinal',
+      note: 'Spelled as an ordinal in the sheet ("8th"), stored as an integer.' },
     { source: 'Season', field: 'regular_finish', kind: 'ordinal',
       note: 'Regular season finish.' },
     { source: 'Div/ Conf', field: 'division_finish', kind: 'ordinal' },
@@ -286,6 +313,7 @@ export const PLAYERS: SheetSpec = {
   key: 'Players',
   sheetName: 'Players',
   headerRow: HEADER_ROWS.Players,
+  keyColumn: 'Name',
   description:
     'Canonical player list with position. The counter columns are the ' +
     'commissioner\'s own dedupe QA and are not imported.',

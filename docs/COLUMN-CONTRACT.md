@@ -56,18 +56,18 @@ title banner). Adding or removing a row above the headers breaks this.
 | `Opp. Act. vs Proj.` | `opp_actual_vs_proj` | number | no |
 | `Division` | `division` | string | no |
 | `Opp. Division` | `opp_division` | string | no |
-| `Wk Hi` | `week_high` | raw | no |
-| `Wk Lo` | `week_low` | raw | no |
-| `Sea Hi` | `season_high` | raw | no |
-| `Sea Lo` | `season_low` | raw | no |
-| `Car Hi` | `career_high` | raw | no |
-| `Car Lo` | `career_low` | raw | no |
-| `Placed (Reg. S.)` | `placed_regular` | raw | no |
-| `Placed (Playoff)` | `placed_playoff` | raw | no |
-| `Placed (Div/ Conf)` | `placed_div_conf` | raw | no |
+| `Wk Hi` | `week_high` | highlow | no |
+| `Wk Lo` | `week_low` | highlow | no |
+| `Sea Hi` | `season_high` | highlow | no |
+| `Sea Lo` | `season_low` | highlow | no |
+| `Car Hi` | `career_high` | highlow | no |
+| `Car Lo` | `career_low` | highlow | no |
+| `Placed (Reg. S.)` | `placed_regular` | ordinal | no |
+| `Placed (Playoff)` | `placed_playoff` | ordinal | no |
+| `Placed (Div/ Conf)` | `placed_div_conf` | ordinal | no |
 | `Record @ Game` | `record_at_game` | string | no |
 | `Opp. Rec. @ Game` | `opp_record_at_game` | string | no |
-| `Drafted From` | `drafted_from` | string | no |
+| `Drafted From` | `drafted_from` | ordinal | no |
 | `W@G` | `wins_at_game` | int | no |
 | `L@G` | `losses_at_game` | int | no |
 | `Opp W@G` | `opp_wins_at_game` | int | no |
@@ -93,7 +93,9 @@ title banner). Adding or removing a row above the headers breaks this.
 - **`Round/ Game`** — Note the space after the slash. Quarterfinal | Semifinal | Championship | 3rd Place | 5th/6th | 9th Place | 11th/12th.
 - **`Team`** — Manager short name. Resolved through data/managers.yaml — never stored as a string.
 - **`Division`** — Populated for 2016, 2023 and 2024 only. Blank 2017-2022 is expected, not missing data.
-- **`Drafted From`** — A filter dimension in the commissioner's own Game Pivot.
+- **`Wk Hi`** — Set on 155 rows — the highest score of that week.
+- **`Car Hi`** — Set on only 15 rows across nine seasons — a career-best game.
+- **`Drafted From`** — The draft slot this team picked from that year, spelled as an ordinal (1st-12th). A filter dimension in the commissioner's own Game Pivot.
 - **`Game Played`** — Respect this. Not every row is a completed game.
 
 ### Columns the website deliberately ignores
@@ -145,10 +147,10 @@ title banner). Adding or removing a row above the headers breaks this.
 | `Keep Year` | `keep_year` | int | no |
 | `Pos Rank That Week` | `pos_rank_that_week` | int | no |
 | `Pos Rank W/BN` | `pos_rank_with_bench` | int | no |
-| `Players above Min` | `players_above_min` | number | no |
+| `Players above Min` | `players_above_min` | yesno | no |
 | `Max Bench` | `max_bench` | number | no |
 | `BN Gap` | `bench_gap` | number | no |
-| `Best BN over STRT` | `best_bench_over_starter` | number | no |
+| `Best BN over STRT` | `best_bench_over_starter` | yesno | no |
 | `Flex Eligible` | `flex_eligible` | string | no |
 | `GP Count` | `games_played_count` | int | no |
 | `Played Y/N` | `played` | yesno | no |
@@ -169,16 +171,16 @@ title banner). Adding or removing a row above the headers breaks this.
 | `Favorite/ Underdog` | `favorite_or_underdog` | string | no |
 | `Division` | `division` | string | no |
 | `Opp. Division` | `opp_division` | string | no |
-| `Wk Hi` | `week_high` | raw | no |
-| `Wk Lo` | `week_low` | raw | no |
-| `Sea Hi` | `season_high` | raw | no |
-| `Sea Lo` | `season_low` | raw | no |
-| `Car Hi` | `career_high` | raw | no |
-| `Car Lo` | `career_low` | raw | no |
-| `Placed (Reg. S.)` | `placed_regular` | raw | no |
-| `Placed (Playoff)` | `placed_playoff` | raw | no |
-| `Drafted From` | `drafted_from` | string | no |
-| `Placed (Div/ Conf)` | `placed_div_conf` | raw | no |
+| `Wk Hi` | `week_high` | highlow | no |
+| `Wk Lo` | `week_low` | highlow | no |
+| `Sea Hi` | `season_high` | highlow | no |
+| `Sea Lo` | `season_low` | highlow | no |
+| `Car Hi` | `career_high` | highlow | no |
+| `Car Lo` | `career_low` | highlow | no |
+| `Placed (Reg. S.)` | `placed_regular` | ordinal | no |
+| `Placed (Playoff)` | `placed_playoff` | ordinal | no |
+| `Drafted From` | `drafted_from` | ordinal | no |
+| `Placed (Div/ Conf)` | `placed_div_conf` | ordinal | no |
 | `PPG` | `ppg` | number | no |
 | `Game #` | `game_number` | int | no |
 | `YEAR_WK` | `year_wk` | string | no |
@@ -191,7 +193,10 @@ title banner). Adding or removing a row above the headers breaks this.
 - **`Pick Drafted`** — String, not number: "1.1" and "1.10" collide numerically.
 - **`Drafted By`** — Can differ from Team — the player was drafted elsewhere and acquired later.
 - **`Keeper`** — Keeper | NO
-- **`Best BN over STRT`** — Powers the bench-regret leaderboard. His definition, not ours.
+- **`Players above Min`** — A 0/1 flag, set on 4,432 rows.
+- **`Max Bench`** — Points scored by the best bench player. Only filled on the 2,469 flagged rows.
+- **`BN Gap`** — THE bench-regret number: how many points the bench beat the starter by. Real values from -32.00 to 46.45 on 4,287 rows. This is what the "left 30 points on the bench" leaderboard sorts on.
+- **`Best BN over STRT`** — A 0/1 flag marking that a bench player outscored a starter — not the margin. The margin is `BN Gap`.
 - **`Reason`** — Started | Benched | IR | Bye. With Played Y/N this is what makes "should have started him" possible.
 
 ### Columns the website deliberately ignores
@@ -264,7 +269,7 @@ title banner). Adding or removing a row above the headers breaks this.
 | `Year` | `year` | int | **yes** |
 | `Name` | `team` | string | **yes** |
 | `Division` | `division` | string | no |
-| `Draft Slot` | `draft_slot` | int | no |
+| `Draft Slot` | `draft_slot` | ordinal | no |
 | `Season` | `regular_finish` | ordinal | no |
 | `Div/ Conf` | `division_finish` | ordinal | no |
 | `Playoff` | `final_finish` | ordinal | no |
@@ -275,6 +280,7 @@ title banner). Adding or removing a row above the headers breaks this.
 ### Notes on particular columns
 
 - **`ID`** — Format is {Year}_{Name}, e.g. "2016_Jerry".
+- **`Draft Slot`** — Spelled as an ordinal in the sheet ("8th"), stored as an integer.
 - **`Season`** — Regular season finish.
 - **`Playoff`** — Final overall finish. "1st" = league champion. Blank for all of 2024 — see OPEN-QUESTIONS q5.
 
