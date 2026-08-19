@@ -41,13 +41,28 @@ Corollaries, which are enforced in code rather than left to discipline:
 | `packages/sync` | Column contract, fail-loud validation, xlsx + Google Sheets readers, transforms, idempotent loader, CLI |
 | `docs/` | Column contract (generated), open questions, data model, how-to-update guide |
 | Tests | 130 passing — unit, end-to-end against real Postgres, and 11 against the real workbook |
-| `apps/rbb`, `apps/dynomites`, `packages/ui` | **Not built yet** — see below |
+| `apps/rbb` | Next.js site — home, champions, all-time standings, seasons, season detail, manager profiles, records, bench regret. Mobile-first, builds without a database |
+| `apps/dynomites`, `packages/ui` | **Not built yet** |
 
 ### Not built yet
 
-The read-only sites themselves (phases 2–5 of the build plan), the
-`/admin/sync` page and its cron trigger (phase 6), and the Dyno Mites–specific
-tables' sync. The schema for all of it is in place.
+The `/admin/sync` page and its cron trigger (phase 6), the lineup explorer and
+draft browser (phase 3), power rankings (phase 4), and the Dyno Mites site and its
+dynasty-table sync (phase 5). The schema for all of it is in place.
+
+### Deploying
+
+Vercel builds `apps/rbb` via the root `vercel.json`, so a fresh clone deploys with
+no dashboard configuration. **The site builds and renders without a database** —
+every data page is server-rendered on demand and shows a "not connected yet"
+notice when `DATABASE_URL` is absent. That is deliberate: the deployment pipeline
+has to work before the data does, and a build that needs a database cannot be
+deployed until one exists.
+
+To connect it, follow [docs/SUPABASE-SETUP.md](docs/SUPABASE-SETUP.md).
+
+When the Dyno Mites site is added, it becomes a second Vercel project with **Root
+Directory** set to `apps/dynomites`.
 
 ### Verified against the real workbook
 

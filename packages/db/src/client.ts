@@ -15,6 +15,17 @@ export type PoolClient = pg.PoolClient;
 
 let pool: pg.Pool | undefined;
 
+/**
+ * Whether a database is configured at all.
+ *
+ * The site is deployed before the database exists, and must build and render
+ * without one — so every page asks this rather than throwing. A missing
+ * DATABASE_URL is a normal state ("not connected yet"), not an error.
+ */
+export function isDatabaseConfigured(): boolean {
+  return typeof process.env.DATABASE_URL === 'string' && process.env.DATABASE_URL !== '';
+}
+
 export function connectionString(): string {
   const url = process.env.DATABASE_URL;
   if (!url) {

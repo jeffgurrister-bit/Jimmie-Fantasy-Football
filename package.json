@@ -3,14 +3,17 @@
   "private": true,
   "version": "0.1.0",
   "packageManager": "pnpm@10.33.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
+    "build": "pnpm --filter \"./apps/*\" build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "lint": "pnpm -r --if-present lint",
     "sync": "pnpm --filter @jff/sync sync",
     "backfill": "pnpm --filter @jff/sync backfill",
-    "migrate": "pnpm --filter @jff/db migrate"
+    "migrate": "pnpm --filter @jff/db migrate",
+    "dev": "pnpm --filter @jff/rbb dev"
   }
 }
