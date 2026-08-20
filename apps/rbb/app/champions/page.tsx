@@ -37,7 +37,7 @@ export default function ChampionsPage(): React.ReactElement {
       </section>
       <section>
         <h2>Titles per manager</h2>
-        <ul className="plain card card-pad">
+        <ul className="plain card card-pad narrow">
           {titles.map((t) => (
             <li key={t.manager_id} className="row-between">
               <span>

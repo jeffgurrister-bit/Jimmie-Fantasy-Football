@@ -1,0 +1,77 @@
+# Regenerates the website's data from the workbook, so the site can be updated
+# from a browser with no terminal involved.
+#
+# Two ways to run it:
+#   1. Upload a new RBB_League_History.xlsx to data/workbook/ on github.com.
+#      Committing the upload triggers this automatically.
+#   2. Actions tab -> "Update league data" -> "Run workflow".
+#
+# It regenerates apps/rbb/data/snapshot.json and commits it. Vercel sees the commit
+# and redeploys. If the workbook has not actually changed anything, nothing is
+# committed and no deployment happens.
+name: Update league data
+
+on:
+  push:
+    paths:
+      - 'data/workbook/*.xlsx'
+      - 'data/managers.yaml'
+  workflow_dispatch:
+
+# One at a time: two overlapping runs would race to commit the same file.
+concurrency:
+  group: update-league-data
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Find the workbook
+        id: find
+        run: |
+          # Newest .xlsx wins, so an upload under a slightly different name still works.
+          book="$(ls -t data/workbook/*.xlsx 2>/dev/null | head -1 || true)"
+          if [ -z "$book" ]; then
+            echo "::error::No .xlsx found in data/workbook/. Upload the workbook there first."
+            exit 1
+          fi
+          echo "Using $book"
+          echo "book=$book" >> "$GITHUB_OUTPUT"
+
+      - name: Check the manager list is complete
+        run: pnpm --filter @jff/sync check-managers
+
+      - name: Rebuild the site's data
+        run: pnpm snapshot --file "${{ steps.find.outputs.book }}"
+
+      - name: Make sure the site still builds with the new data
+        run: pnpm build
+
+      - name: Commit the updated data
+        run: |
+          if git diff --quiet -- apps/rbb/data/snapshot.json; then
+            echo "No change in the league data — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/rbb/data/snapshot.json
+          git commit -m "Update league data from the workbook"
+          git push

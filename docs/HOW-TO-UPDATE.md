@@ -16,34 +16,52 @@ site updates.
 Nothing runs in the background, there is no database to maintain, and there is
 nothing that can quietly stop working while you are not looking.
 
-## Updating it
+## Updating it — from a browser, no terminal
 
-1. Update your workbook exactly as you always do — Yahoo paste, formulas, done.
-2. Run one command:
+This is the way meant for Jimmie. Nothing to install, no commands.
 
-   ```bash
-   pnpm snapshot --file /path/to/RBB_League_History.xlsx
-   ```
+1. Update the workbook exactly as always — Yahoo paste, formulas, done.
+2. Go to the repository on **github.com** and open the `data/workbook/` folder.
+3. **Add file → Upload files.** Drag `RBB_League_History.xlsx` in. Commit.
+4. Wait about two minutes.
 
-   It tells you what it found:
+That's it. Uploading the file starts a robot that reads the workbook, rebuilds the
+site's data, and commits it; Vercel then redeploys on its own. Replacing the file
+with a newer copy of the same name is expected — that is how each update works.
 
-   ```
-   Wrote apps/rbb/data/snapshot.json
-     255 KB — 9 seasons, 804 games, 8 champions, 15 managers
+You can also start it by hand without uploading anything: **Actions → "Update
+league data" → Run workflow**. Useful after editing `data/managers.yaml`.
 
-   1 thing(s) worth a look:
-     • 2024 has no team with a 1st-place finish in the Finishes sheet …
-   ```
+### Watching it work
 
-3. Commit and push:
+The **Actions** tab shows each run. A green tick means the site is updating. A red
+cross means it stopped and changed nothing — click into it and the failing step says
+why, in the same plain language as below. The live site is never left broken; it
+keeps serving the last good data until a run succeeds.
 
-   ```bash
-   git add apps/rbb/data/snapshot.json
-   git commit -m "Update league data"
-   git push
-   ```
+If the workbook has not actually changed any numbers, the run finishes without
+committing and no deployment happens. That is normal.
 
-Vercel rebuilds on its own. A minute later the site is current.
+## Updating it from a terminal
+
+Same thing, if you would rather:
+
+```bash
+pnpm snapshot --file /path/to/RBB_League_History.xlsx
+git add apps/rbb/data/snapshot.json
+git commit -m "Update league data"
+git push
+```
+
+It prints what it found:
+
+```
+Wrote apps/rbb/data/snapshot.json
+  255 KB — 9 seasons, 804 games, 8 champions, 15 managers
+
+1 thing(s) worth a look:
+  • 2024 has no team with a 1st-place finish in the Finishes sheet …
+```
 
 ## What the messages mean
 
@@ -100,14 +118,19 @@ Check it any time:
 pnpm --filter @jff/sync check-managers
 ```
 
-## Later, if you want it fully hands-off
+## The one thing still missing
 
-Updating currently means running one command on a computer. Two future options:
+Uploading a file is a browser away, but it is still a manual step, and the workbook
+is a 12 MB file added to the repository each time.
 
-- **A button on the site** — a page you open on your phone that re-reads the Google
-  Sheet and updates the site, no computer needed.
-- **A schedule** — the site re-reads the sheet a few times a day in season, on its
-  own.
+The version with no steps at all is for the site to read the **Google Sheets**
+directly — on a schedule during the season, or when a button is pressed. Then
+nothing is uploaded, because the sheet you already maintain *is* the source.
 
-Both need the site to read your Google Sheets directly, which is Phase 6. The
-snapshot approach came first because it works today with nothing to set up.
+That is not built yet, for a concrete reason: the Google history sheet is laid out
+differently from the Excel workbook. Its tabs are `Banners`, `Championships`,
+`History`, `Records`, `Game Data`, `Previous Drafts`, `Excel Drop` — not the
+`GameData` / `LineupData` / `Finishes` structure the importer understands. Mapping
+it needs someone to read those tabs, and the environment this was built in cannot
+reach Google. Once that mapping exists, the same robot can run on a schedule with
+no upload at all.

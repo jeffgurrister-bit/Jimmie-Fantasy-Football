@@ -1,42 +1,47 @@
 /* =============================================================================
    Risky Biscuit Brigade — mobile-first, no CSS framework.
-   Warm biscuit-and-gravy palette, so RBB reads as a different site from Dyno
-   Mites even though many of the same people play in both.
+
+   Neutral slate palette. The workbook itself carries no colour scheme — its theme
+   is Google Sheets' stock default (#4285F4, #EA4335, #FBBC04, #34A853) and its
+   fills are the standard pastel highlight swatches — so there is no house style to
+   inherit. This aims for the plain, legible look of a stats reference, with gold
+   reserved for championships so a trophy still reads as a trophy.
+
    Designed and checked at 375px first; desktop is the enhancement.
    ============================================================================= */
 
 :root {
-  --bg: #fbf7f0;
+  --bg: #f6f7f9;
   --surface: #ffffff;
-  --surface-2: #f4ece0;
-  --border: #e2d5c2;
-  --text: #241c14;
-  --text-dim: #6b5a48;
-  --accent: #a8620f;          /* biscuit crust */
-  --accent-soft: #f3e0c6;
-  --gravy: #5a4632;
-  --gold: #b8860b;
-  --win: #1d6b3f;
-  --loss: #9b2c2c;
+  --surface-2: #f0f2f5;
+  --border: #dde1e7;
+  --text: #15181d;
+  --text-dim: #5f6873;
+  --accent: #1a5fa8;
+  --accent-soft: #e4edf7;
+  --header: #1f2630;
+  --gold: #a8801a;
+  --win: #17683c;
+  --loss: #a12b2b;
   --radius: 10px;
-  --shadow: 0 1px 2px rgb(36 28 20 / 8%), 0 4px 12px rgb(36 28 20 / 5%);
-  --maxw: 1080px;
+  --shadow: 0 1px 2px rgb(20 24 30 / 6%), 0 4px 12px rgb(20 24 30 / 4%);
+  --maxw: 1000px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #14100c;
-    --surface: #1e1811;
-    --surface-2: #2a2118;
-    --border: #3a2f22;
-    --text: #f3ece2;
-    --text-dim: #a8977f;
-    --accent: #e0a457;
-    --accent-soft: #3a2b16;
-    --gravy: #cbb79b;
-    --gold: #d9ad3c;
+    --bg: #0f1216;
+    --surface: #171b21;
+    --surface-2: #1f252d;
+    --border: #2b323b;
+    --text: #e9edf2;
+    --text-dim: #99a3b0;
+    --accent: #6fa8e0;
+    --accent-soft: #16283b;
+    --header: #141a21;
+    --gold: #d3ad48;
     --win: #4ec27f;
-    --loss: #e07070;
+    --loss: #e58080;
     --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 12px rgb(0 0 0 / 30%);
   }
 }
@@ -62,8 +67,8 @@ a:hover { text-decoration: underline; }
 
 /* ---------- header ---------- */
 .masthead {
-  background: linear-gradient(160deg, var(--gravy), #2e2317 70%);
-  color: #f7efe2;
+  background: var(--header);
+  color: #f2f5f8;
   padding: 20px 0 18px;
   border-bottom: 3px solid var(--accent);
 }
@@ -76,7 +81,7 @@ a:hover { text-decoration: underline; }
 .masthead .tagline {
   margin: 4px 0 0;
   font-size: 0.82rem;
-  color: #d9c8ad;
+  color: #a8b4c2;
 }
 .masthead a { color: inherit; }
 
@@ -96,7 +101,7 @@ nav.tabs a {
   border-radius: 999px;
   font-size: 0.87rem;
   font-weight: 600;
-  color: #e8dcc8;
+  color: #dbe3ec;
   background: rgb(255 255 255 / 8%);
   white-space: nowrap;
 }
@@ -129,6 +134,11 @@ h3 { font-size: 0.97rem; margin: 0 0 8px; }
 }
 .card-pad { padding: 14px; }
 
+/* A card whose only content is a table shrinks to fit it, so the table's own
+   width decides the card's width instead of the other way round. On a phone the
+   cap plus the inner scroller take over. */
+.table-card { width: fit-content; max-width: 100%; }
+
 /* ---------- stat tiles ---------- */
 .tiles {
   display: grid;
@@ -155,14 +165,20 @@ h3 { font-size: 0.97rem; margin: 0 0 8px; }
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
-table { border-collapse: collapse; width: 100%; font-size: 0.87rem; }
+/* `max-content`, not `auto`: an auto-layout table still stretches to fill its
+   container, which is what pushed the columns out to both edges with canyons
+   between the numbers. max-content makes the table exactly as wide as its contents
+   need, and `.table-card` above shrinks to match it.
+   No max-width here on purpose — on a phone the table SHOULD overrun its container
+   so the .scroller can scroll it. */
+table { border-collapse: collapse; width: max-content; font-size: 0.87rem; }
 thead th {
   text-align: right;
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-dim);
-  padding: 9px 10px;
+  padding: 9px 14px;
   background: var(--surface-2);
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
@@ -170,7 +186,7 @@ thead th {
   top: 0;
 }
 tbody td {
-  padding: 9px 10px;
+  padding: 9px 14px;
   text-align: right;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
@@ -237,6 +253,7 @@ td.num-strong { font-weight: 700; }
 }
 .pill.muted { background: var(--surface-2); color: var(--text-dim); }
 .pill.gold { background: var(--gold); color: #fff; }
+.pill.soft { background: var(--surface-2); color: var(--text-dim); font-weight: 600; }
 
 .notice {
   border: 1px solid var(--border);
@@ -265,7 +282,21 @@ ul.plain { list-style: none; padding: 0; margin: 0; }
 ul.plain li { padding: 9px 0; border-bottom: 1px solid var(--border); }
 ul.plain li:last-child { border-bottom: none; }
 
-.row-between { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+/* A label and its value, kept next to each other.
+   `justify-content: space-between` across a 1000px card flings the two apart and
+   reads as a mistake, so these rows are capped at a width where the pair still
+   looks related. The cap, not the flex, is what does the work. */
+.row-between {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: baseline;
+  max-width: 34rem;
+}
+
+/* For cards holding nothing but label/value rows, so the card itself does not
+   stretch past its contents on a wide screen. */
+.card.narrow { max-width: 36rem; }
 
 footer.site {
   border-top: 1px solid var(--border);
@@ -279,3 +310,14 @@ footer.site {
 
 .muted { color: var(--text-dim); }
 .tiny { font-size: 0.78rem; }
+
+/* A season that was played but has no final placings entered yet. Same card shape
+   as a championship so the timeline stays continuous, but visibly unfinished
+   rather than quietly absent. */
+.banner.pending {
+  border-top-color: var(--border);
+  border-style: dashed;
+  background: var(--surface-2);
+}
+.banner.pending .yr { color: var(--text-dim); }
+.banner .who.muted { color: var(--text-dim); font-weight: 600; }

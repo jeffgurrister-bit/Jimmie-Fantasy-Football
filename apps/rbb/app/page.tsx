@@ -2,7 +2,10 @@ import Link from 'next/link';
 import { NoData } from '../components/NoData.tsx';
 import { ScrollTable } from '../components/Table.tsx';
 import { int, num, pct, record } from '../lib/format.ts';
-import { champions, hasData, standings as allStandings, titleCounts, totals as leagueTotals } from '../lib/data.ts';
+import {
+  champions, hasData, seasons as allSeasons, standings as allStandings, titleCounts,
+  totals as leagueTotals,
+} from '../lib/data.ts';
 
 export default function HomePage(): React.ReactElement {
   if (!hasData()) return <NoData />;
@@ -11,6 +14,10 @@ export default function HomePage(): React.ReactElement {
   const champs = champions();
   const titles = titleCounts();
   const standings = allStandings('regular');
+  // Seasons that were played but whose final placings are not filled in on the
+  // source sheet. Shown alongside the winners so the wall does not look as though
+  // the league simply stopped.
+  const unrecorded = allSeasons().filter((s) => s.champion_manager_id === null);
 
   return (
     <>
@@ -25,8 +32,8 @@ export default function HomePage(): React.ReactElement {
             <div className="l">Games</div>
           </div>
           <div className="tile">
-            <div className="n">{int(totals.lineup_rows)}</div>
-            <div className="l">Lineup rows</div>
+            <div className="n">{int(totals.managers)}</div>
+            <div className="l">Managers</div>
           </div>
           <div className="tile">
             <div className="n">{int(totals.draft_picks)}</div>
@@ -40,6 +47,13 @@ export default function HomePage(): React.ReactElement {
           Champions <span className="count">{champs.length} recorded</span>
         </h2>
         <div className="banners">
+          {unrecorded.map((s) => (
+            <div className="banner pending" key={s.year}>
+              <div className="yr">{s.year}</div>
+              <div className="who muted">Not recorded</div>
+              <div className="real">Playoff results missing from the sheet</div>
+            </div>
+          ))}
           {champs.map((c) => (
             <div className="banner" key={c.year}>
               <div className="yr">{c.year}</div>
@@ -56,7 +70,7 @@ export default function HomePage(): React.ReactElement {
 
       <section>
         <h2>Most titles</h2>
-        <ul className="plain card card-pad">
+        <ul className="plain card card-pad narrow">
           {titles.map((t) => (
             <li key={t.manager_id} className="row-between">
               <span>

@@ -17,7 +17,7 @@ export function ScrollTable({
   hint?: string | false;
 }): React.ReactElement {
   return (
-    <div className="card">
+    <div className="card table-card">
       {hint === false ? null : <p className="scroll-hint">{hint}</p>}
       <div className="scroller">
         <table>

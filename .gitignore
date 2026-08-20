@@ -9,10 +9,13 @@ dist/
 .env*.local
 !.env.example
 
-# Source workbooks are the commissioner's system of record; they are large and
-# private. Keep them out of git — point the backfill at a local path instead.
+# Workbooks are large, so they stay out of git by default — point the tools at a
+# local path instead. The one exception is data/workbook/, which is how the
+# commissioner uploads a new copy through GitHub's website without needing a
+# terminal: the update workflow reads whatever lands there.
 *.xlsx
 *.xlsm
+!data/workbook/*.xlsx
 !docs/fixtures/**/*.xlsx
 
 .DS_Store
