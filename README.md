@@ -78,16 +78,27 @@ app folder — the pattern Vercel documents for monorepos.
 | Setting | Value |
 | --- | --- |
 | **Root Directory** | `apps/rbb` |
+| **Framework Preset** | **Next.js** — not "Other" |
 | Include files outside the root directory | **Enabled** — required, `apps/rbb` imports types from `packages/db` |
-| Framework | Next.js (auto-detected) |
 | Build / install commands | leave empty — auto-detected |
+| Output Directory | leave empty — do not override |
 | Environment variables | none |
 
-There is deliberately no `vercel.json`. An earlier attempt kept Root Directory at
-the repo root and used `vercel.json` to redirect the build with `buildCommand` plus
-an `outputDirectory` of `apps/rbb/.next`. That is not how Vercel expects Next.js to
-be deployed from a monorepo, and it failed. Pointing Root Directory at the app
-instead lets normal framework detection do the work.
+`apps/rbb/vercel.json` declares `"framework": "nextjs"` so this does not depend on
+a dashboard setting being right.
+
+Both of those settings caused real failures worth recording, because neither looks
+like a build problem:
+
+- **Framework Preset left as "Other"** (the default when a project is created
+  against a repo that has no app in it yet) makes Vercel build the project
+  correctly and then fail with `No Output Directory named "public" found after the
+  Build completed`. The build log shows every route prerendering successfully right
+  above the error, so it reads like a broken build when it is actually a project
+  that was never told it is a Next.js app.
+- **Keeping Root Directory at the repo root** and redirecting the build from a root
+  `vercel.json` with `buildCommand` plus an `outputDirectory` of `apps/rbb/.next`
+  fails too. Vercel's Next.js builder expects the app to *be* the root directory.
 
 The Dyno Mites site will be a second project with Root Directory `apps/dynomites`,
 sharing the same repository.
