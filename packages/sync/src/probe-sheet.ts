@@ -1,7 +1,9 @@
 /**
- * Looks at a Google Sheet and reports what is actually in it.
+ * Looks at the commissioner's Google Sheets and reports what is actually in them.
  *
- *   pnpm probe-sheet <spreadsheetId>
+ *   pnpm probe-sheet                        all five
+ *   pnpm probe-sheet rbb-history dyno-mites  named ones
+ *   pnpm probe-sheet <any spreadsheet id>    something not in the list
  *
  * WHY THIS EXISTS
  * ---------------
@@ -30,26 +32,9 @@
  */
 import { writeFile } from 'node:fs/promises';
 import * as XLSX from 'xlsx';
-
-/** The four spreadsheets from the handoff notes, for convenience. */
-export const SHEETS: Record<string, { id: string; label: string }> = {
-  'rbb-history': {
-    id: '1_jhoVbxloZG8lxDaDXMIkG7SEoKBfU1_2MBI4qSPRYg',
-    label: 'RBB — League History',
-  },
-  'rbb-main': {
-    id: '1hy6u3L3yBNlSYOb2luy1PYT1yPnFBLA4ZfdseJLKFXQ',
-    label: 'RBB — Main League File',
-  },
-  'rbb-power-rankings': {
-    id: '1YANpO-Mzht6FJpc93ul1jCHONEswHCp85Ah_rFskR4g',
-    label: 'RBB — Power Rankings',
-  },
-  'dyno-mites': {
-    id: '1HHJ5uu8wu45E58-dB9pNZl-PGkU1DmZVwQfNDmI3HTw',
-    label: 'Dyno Mites — Main Doc',
-  },
-};
+// Deliberately imported rather than re-listed here: keeping a second copy of the
+// spreadsheet list is exactly how the Monte Carlo simulator got left out.
+import { SPREADSHEETS, spreadsheet } from './sources/gviz.ts';
 
 const HIDDEN = ['visible', 'hidden', 'very hidden'];
 
@@ -131,11 +116,13 @@ function describe(buf: Buffer, label: string): void {
 async function main(): Promise<void> {
   const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
   const saveTo = process.argv.includes('--save') ? 'downloaded' : null;
-  const wanted = args.length > 0 ? args : Object.keys(SHEETS);
+  const wanted = args.length > 0 ? args : SPREADSHEETS.map((s) => s.key);
 
   let failures = 0;
   for (const key of wanted) {
-    const entry = SHEETS[key] ?? { id: key, label: key };
+    // An unrecognised argument is treated as a raw spreadsheet id, so a new sheet
+    // can be inspected without editing any code first.
+    const entry = spreadsheet(key) ?? { id: key, label: key };
     try {
       const buf = await downloadSheet(entry.id);
       describe(buf, entry.label);

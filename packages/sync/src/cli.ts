@@ -13,7 +13,7 @@ import { closePool } from '@jff/db';
 import { SyncError } from './errors.ts';
 import { createResolver } from './managers.ts';
 import { runRbbSync } from './run.ts';
-import { GoogleSheetSource, SPREADSHEETS } from './sources/gviz.ts';
+import { GoogleSheetSource, spreadsheet } from './sources/gviz.ts';
 import { XlsxSource } from './sources/xlsx.ts';
 
 interface Args {
@@ -89,7 +89,7 @@ async function main(): Promise<void> {
               throw new SyncError('Pass --file <path to RBB_League_History.xlsx>.');
             })(),
         )
-      : new GoogleSheetSource(args.sheet ?? SPREADSHEETS.rbbLeagueHistory);
+      : new GoogleSheetSource(args.sheet ?? spreadsheet('rbb-history')!.id);
 
   const result = await runRbbSync({
     source,

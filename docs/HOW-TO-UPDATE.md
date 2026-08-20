@@ -149,8 +149,9 @@ So there is a workflow that looks on our behalf:
 
 **Actions → "Read Google Sheets" → Run workflow.**
 
-It downloads each sheet, prints every tab with its size and first few rows into the
-run log, and attaches the spreadsheets as artifacts. It reads only: it changes
+It downloads all five sheets — Main League File, League History, Monte Carlo
+simulator, Power Rankings, and the Dyno Mites doc — prints every tab with its size
+and first few rows into the run log, and attaches them as artifacts. It reads only: it changes
 nothing, commits nothing and deploys nothing. Its output is what the real reader
 gets written from — and running it also proves the network path works before any
 code depends on it.

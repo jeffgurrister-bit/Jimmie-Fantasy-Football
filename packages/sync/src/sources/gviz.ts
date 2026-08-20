@@ -79,11 +79,48 @@ export class GoogleSheetSource implements SheetSource {
   }
 }
 
-/** Spreadsheet ids from the handoff notes. */
-export const SPREADSHEETS = {
-  rbbLeagueHistory: '1_jhoVbxloZG8lxDaDXMIkG7SEoKBfU1_2MBI4qSPRYg',
-  rbbMain: '1hy6u3L3yBNlSYOb2luy1PYT1yPnFBLA4ZfdseJLKFXQ',
-  rbbPowerRankings: '1YANpO-Mzht6FJpc93ul1jCHONEswHCp85Ah_rFskR4g',
-  rbbMonteCarlo: '1z2b6-CFyY6Fvj0zwzZTyElyQKe-IGvBiazP_YoPavlY',
-  dynoMites: '1HHJ5uu8wu45E58-dB9pNZl-PGkU1DmZVwQfNDmI3HTw',
-} as const;
+/**
+ * All FIVE spreadsheets the commissioner shared — the single list, so nothing that
+ * iterates them can quietly cover only some. An earlier version of the sheet probe
+ * kept its own copy and silently omitted the Monte Carlo simulator.
+ *
+ * `key` is what the CLI and the workflow accept as an argument.
+ */
+export const SPREADSHEETS = [
+  {
+    key: 'rbb-main',
+    id: '1hy6u3L3yBNlSYOb2luy1PYT1yPnFBLA4ZfdseJLKFXQ',
+    league: 'rbb',
+    label: 'RBB — Main League File (the live draft runs through here)',
+  },
+  {
+    key: 'rbb-history',
+    id: '1_jhoVbxloZG8lxDaDXMIkG7SEoKBfU1_2MBI4qSPRYg',
+    league: 'rbb',
+    label: 'RBB — League History',
+  },
+  {
+    key: 'rbb-monte-carlo',
+    id: '1z2b6-CFyY6Fvj0zwzZTyElyQKe-IGvBiazP_YoPavlY',
+    league: 'rbb',
+    label: 'RBB — Monte Carlo playoff simulator',
+  },
+  {
+    key: 'rbb-power-rankings',
+    id: '1YANpO-Mzht6FJpc93ul1jCHONEswHCp85Ah_rFskR4g',
+    league: 'rbb',
+    label: 'RBB — Power Rankings',
+  },
+  {
+    key: 'dyno-mites',
+    id: '1HHJ5uu8wu45E58-dB9pNZl-PGkU1DmZVwQfNDmI3HTw',
+    league: 'dm',
+    label: 'Dyno Mites — Main Doc',
+  },
+] as const;
+
+export type SpreadsheetKey = (typeof SPREADSHEETS)[number]['key'];
+
+export function spreadsheet(key: string): (typeof SPREADSHEETS)[number] | undefined {
+  return SPREADSHEETS.find((s) => s.key === key);
+}

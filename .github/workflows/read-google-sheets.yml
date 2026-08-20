@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       which:
-        description: 'Which sheets (space separated), or blank for all'
+        description: 'Which sheets (space separated), or blank for all five'
         required: false
         default: ''
 
