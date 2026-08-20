@@ -62,6 +62,31 @@ export interface SheetSpec {
    * genuinely NEW column still trips the drift check.
    */
   readonly ignored: readonly string[];
+  /**
+   * Skip the "unexpected column" half of the drift check.
+   *
+   * For a tab that is one wide slab holding several unrelated blocks side by side,
+   * enumerating every neighbouring column would be pages of noise that says
+   * nothing. A renamed or deleted column among the ones actually read still fails
+   * loudly, which is the half that protects the data.
+   */
+  readonly allowExtraColumns?: boolean;
+  /**
+   * The span of columns this spec owns, as [firstIndex, lastIndex] inclusive.
+   *
+   * Needed when a tab lays several unrelated blocks side by side AND repeats header
+   * names between them. The Google "Excel Drop" tab has a column called `Name`
+   * three times — at 4, 11 and 41 — belonging to three different blocks. Rows are
+   * keyed by header name, so without a window the last `Name` wins and one block's
+   * placings get paired with another block's manager. That is silent, plausible-
+   * looking corruption: it produced a full championship list that was wrong in
+   * every year.
+   *
+   * This is a window, not positional field access — fields are still addressed by
+   * name, just within the span that belongs to them. Only declare it for a sheet
+   * that genuinely repeats header names.
+   */
+  readonly columnWindow?: readonly [number, number];
   readonly description: string;
 }
 
@@ -80,7 +105,17 @@ export interface ValidationResult {
  * is that the failure mode is a clear message rather than quietly wrong records
  * on a public website.
  */
-export function validateHeaders(spec: SheetSpec, actual: readonly string[]): ValidationResult {
+/** Narrows a header list to the span a spec owns, if it declares one. */
+export function windowOf(spec: SheetSpec, headers: readonly string[]): string[] {
+  if (!spec.columnWindow) return [...headers];
+  const [from, to] = spec.columnWindow;
+  const out = new Array<string>(headers.length).fill('');
+  for (let i = from; i <= to && i < headers.length; i += 1) out[i] = headers[i] ?? '';
+  return out;
+}
+
+export function validateHeaders(spec: SheetSpec, actualRaw: readonly string[]): ValidationResult {
+  const actual = windowOf(spec, actualRaw);
   const seen = new Set(actual.map((h) => h.trim()));
   const known = new Set<string>([
     ...spec.columns.map((c) => c.source),
@@ -88,6 +123,7 @@ export function validateHeaders(spec: SheetSpec, actual: readonly string[]): Val
   ]);
 
   const missing = spec.columns.filter((c) => !seen.has(c.source)).map((c) => c.source);
+  if (spec.allowExtraColumns) return { missing, unexpected: [] };
   const unexpected = [...seen].filter(
     (h) =>
       h !== '' &&

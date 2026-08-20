@@ -1,17 +1,21 @@
-# Regenerates the website's data from the workbook, so the site can be updated
-# from a browser with no terminal involved.
+# Keeps the website's data in step with the commissioner's Google Sheet.
 #
-# Two ways to run it:
-#   1. Upload a new RBB_League_History.xlsx to data/workbook/ on github.com.
-#      Committing the upload triggers this automatically.
-#   2. Actions tab -> "Update league data" -> "Run workflow".
+# HOW THE SITE STAYS CURRENT
+# There is no live connection between the sheet and the website — the site is
+# static files, and a visitor's page load never touches Google. Instead this job
+# wakes up on a schedule, downloads the sheet, rebuilds the site's data file,
+# commits it, and Vercel republishes from that commit.
 #
-# It regenerates apps/rbb/data/snapshot.json and commits it. Vercel sees the commit
-# and redeploys. If the workbook has not actually changed anything, nothing is
-# committed and no deployment happens.
+# So the commissioner changes nothing about his routine. He edits his sheet as
+# always; within a few hours the site has it.
+#
+# It also runs on demand: Actions -> "Update league data" -> Run workflow.
 name: Update league data
 
 on:
+  schedule:
+    # 07:00 and 19:00 UTC — after Sunday/Monday games have settled either way.
+    - cron: '0 7,19 * * *'
   push:
     paths:
       - 'data/workbook/*.xlsx'
@@ -31,35 +35,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
           version: 10
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-
       - run: pnpm install --frozen-lockfile
-
-      - name: Find the workbook
-        id: find
-        run: |
-          # Newest .xlsx wins, so an upload under a slightly different name still works.
-          book="$(ls -t data/workbook/*.xlsx 2>/dev/null | head -1 || true)"
-          if [ -z "$book" ]; then
-            echo "::error::No .xlsx found in data/workbook/. Upload the workbook there first."
-            exit 1
-          fi
-          echo "Using $book"
-          echo "book=$book" >> "$GITHUB_OUTPUT"
 
       - name: Check the manager list is complete
         run: pnpm --filter @jff/sync check-managers
 
-      - name: Rebuild the site's data
-        run: pnpm snapshot --file "${{ steps.find.outputs.book }}"
+      - name: Find the workbook
+        id: find
+        run: |
+          # Optional. It supplies lineup and draft detail, which is historical and
+          # does not change week to week; the Google sheet supplies everything that
+          # does. Newest .xlsx wins so a re-upload under a slightly different name
+          # still works.
+          book="$(ls -t data/workbook/*.xlsx 2>/dev/null | head -1 || true)"
+          if [ -n "$book" ]; then echo "Using workbook $book"; else echo "No workbook — Google sheet only."; fi
+          echo "book=$book" >> "$GITHUB_OUTPUT"
+
+      - name: Rebuild the data from the Google sheet
+        env:
+          # The RBB "League History" sheet. Must stay link-shared for this to work.
+          RBB_HISTORY_SHEET_ID: 1_jhoVbxloZG8lxDaDXMIkG7SEoKBfU1_2MBI4qSPRYg
+        run: |
+          if [ -n "${{ steps.find.outputs.book }}" ]; then
+            pnpm snapshot --file "${{ steps.find.outputs.book }}" --history-id "$RBB_HISTORY_SHEET_ID"
+          else
+            pnpm snapshot --history-id "$RBB_HISTORY_SHEET_ID"
+          fi
 
       - name: Make sure the site still builds with the new data
         run: pnpm build
@@ -67,11 +75,11 @@ jobs:
       - name: Commit the updated data
         run: |
           if git diff --quiet -- apps/rbb/data/snapshot.json; then
-            echo "No change in the league data — nothing to commit."
+            echo "Nothing changed in the league data — no commit, no deployment."
             exit 0
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add apps/rbb/data/snapshot.json
-          git commit -m "Update league data from the workbook"
+          git commit -m "Update league data from the Google sheet"
           git push

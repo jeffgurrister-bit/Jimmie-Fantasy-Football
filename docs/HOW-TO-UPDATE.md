@@ -118,7 +118,51 @@ Check it any time:
 pnpm --filter @jff/sync check-managers
 ```
 
-## The version with no steps at all
+## How the site stays current, automatically
+
+There is **no live connection** between the sheet and the website, and that is on
+purpose. The site is plain static files; a visitor loading a page never touches
+Google. A live lookup on every page view would be slower, and would break the site
+whenever Google was slow or the sheet was mid-edit.
+
+Instead a robot pulls on a timer:
+
+```
+Jimmie edits his Google Sheet   (nothing else changes about his routine)
+        │
+        ▼
+twice a day, a scheduled job downloads the sheet, rebuilds the site's
+data file, and commits it
+        │
+        ▼
+Vercel sees the commit and republishes the site
+```
+
+So the answer to "does the site catch it automatically" is **yes, within a few
+hours** — not instantly, and nothing is connected in real time. It runs at 07:00 and
+19:00 UTC. To make it immediate, run it by hand: **Actions → "Update league data" →
+Run workflow**.
+
+If the sheet has not changed anything, the job commits nothing and no deployment
+happens. If the sheet is broken or unreachable, the job fails and the live site
+keeps serving the last good data — it is never left half-updated.
+
+The one requirement: the League History sheet must stay shared as **"Anyone with the
+link can view."** That is how the job reads it without a password. If sharing is
+revoked the job fails and says so.
+
+## Two sources, and why
+
+| | Comes from | Why |
+| --- | --- | --- |
+| Games, standings, champions | the **Google sheet** | It is ahead of the Excel — it has 2025, and every 2024 playoff placing |
+| Lineups, bench regret, drafts | the **Excel workbook** | The Google sheet has no lineup data at all |
+
+The Google half updates itself on the schedule above. The Excel half is historical
+and does not change week to week; upload a fresh copy to `data/workbook/` whenever
+it does.
+
+## The old version of this, for reference
 
 Uploading a file is only a browser away, but it is still a step, and it puts a 12 MB
 workbook into the repository each time.

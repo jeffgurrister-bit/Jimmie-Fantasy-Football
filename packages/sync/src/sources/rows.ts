@@ -1,5 +1,5 @@
 import { SyncError } from '../errors.ts';
-import { assertHeaders, type SheetSpec, type SourceRow } from '../schema.ts';
+import { assertHeaders, windowOf, type SheetSpec, type SourceRow } from '../schema.ts';
 
 /**
  * A source is anything that can hand back a rectangle of cells: the Excel
@@ -54,7 +54,12 @@ export async function readSheet(source: SheetSource, spec: SheetSpec): Promise<S
     );
   }
 
-  const headers = headerCells.map((c) => (c === null || c === undefined ? '' : String(c).trim()));
+  // Blanking the columns outside the spec's window is what stops a repeated header
+  // name in another block from hijacking a field. See SheetSpec.columnWindow.
+  const headers = windowOf(
+    spec,
+    headerCells.map((c) => (c === null || c === undefined ? '' : String(c).trim())),
+  );
 
   // Fail before reading any data, so a renamed column produces one clear message
   // rather than thousands of null-value errors.

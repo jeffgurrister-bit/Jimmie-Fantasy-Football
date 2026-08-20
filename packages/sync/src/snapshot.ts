@@ -30,7 +30,9 @@ import type {
   ManagerProfile, ManagerSeason, RecordGame, SeasonStanding, SeasonSummary,
   StandingRow, TitleCount,
 } from '@jff/db';
-import { DRAFT_HISTORY, FINISHES, GAME_DATA, LINEUP_DATA, PLAYERS } from './columns.ts';
+import {
+  DRAFT_HISTORY, FINISHES, GAME_DATA, GS_FINISHES, GS_GAME_DATA, LINEUP_DATA, PLAYERS,
+} from './columns.ts';
 import { createResolver, type ManagerResolver } from './managers.ts';
 import { readSheet } from './sources/rows.ts';
 import { XlsxSource } from './sources/xlsx.ts';
@@ -108,29 +110,68 @@ function round(v: number, digits = 1): number {
   return Math.round(v * f) / f;
 }
 
+export interface SnapshotSources {
+  /**
+   * The Excel workbook. The only source of lineup data, so bench regret and
+   * anything roster-level comes from here. Optional when `history` is given: the
+   * scheduled update reads Google alone, and lineups are historical and unchanging
+   * anyway.
+   */
+  workbook?: string | undefined;
+  /**
+   * The Google Sheets export of "RBB League History", if available.
+   *
+   * Preferred for games and season finishes because it is ahead of the workbook: it
+   * carries 2025, and it has every playoff placing filled in including 2024's,
+   * which are blank in the Excel. Omit it and everything falls back to the
+   * workbook — the site simply stops at 2024 and 2024 has no champion.
+   */
+  history?: string | undefined;
+}
+
 export async function buildSnapshot(
-  workbookPath: string,
+  sources: SnapshotSources | string,
   resolver: ManagerResolver,
 ): Promise<Snapshot> {
-  const source = new XlsxSource(workbookPath);
+  // A bare path still means "just the workbook", which keeps existing callers
+  // and the parity test working.
+  const paths: SnapshotSources = typeof sources === 'string' ? { workbook: sources } : sources;
+  if (!paths.workbook && !paths.history) {
+    throw new Error('buildSnapshot needs at least one of `workbook` or `history`.');
+  }
+  const workbook = paths.workbook ? new XlsxSource(paths.workbook) : null;
+  const history = paths.history ? new XlsxSource(paths.history) : null;
   const warnings: Array<{ code: string; message: string }> = [];
 
-  // Players is read but not carried into the snapshot: the pages that need a
-  // player's name get it from the bench-regret rows. Reading it anyway means a
-  // rename in that sheet is still caught here rather than only by the database
-  // path.
-  const [gameData, lineupData, draftData, finishesData] = await Promise.all([
-    readSheet(source, GAME_DATA),
-    readSheet(source, LINEUP_DATA),
-    readSheet(source, DRAFT_HISTORY),
-    readSheet(source, FINISHES),
-    readSheet(source, PLAYERS),
+  // Games and finishes come from whichever source is further ahead.
+  const gameSpec = history ? GS_GAME_DATA : GAME_DATA;
+  const finishSpec = history ? GS_FINISHES : FINISHES;
+  const seasonSource = history ?? workbook!;
+
+  const [gameData, finishesData] = await Promise.all([
+    readSheet(seasonSource, gameSpec),
+    readSheet(seasonSource, finishSpec),
   ]);
 
-  const seasonsResult = transformSeasons(FINISHES, finishesData.rows, resolver);
-  const gamesResult = transformGames(GAME_DATA, gameData.rows, resolver);
-  const lineupsResult = transformLineups(LINEUP_DATA, lineupData.rows, resolver);
-  const draftsResult = transformDrafts(DRAFT_HISTORY, draftData.rows, resolver);
+  // Lineups and drafts live only in the workbook. Players is read but not carried
+  // into the snapshot — the pages that need a player's name get it from the
+  // bench-regret rows — but reading it means a rename there is still caught.
+  const [lineupData, draftData] = workbook
+    ? await Promise.all([
+        readSheet(workbook, LINEUP_DATA),
+        readSheet(workbook, DRAFT_HISTORY),
+        readSheet(workbook, PLAYERS),
+      ])
+    : [null, null];
+
+  const seasonsResult = transformSeasons(finishSpec, finishesData.rows, resolver);
+  const gamesResult = transformGames(gameSpec, gameData.rows, resolver);
+  const lineupsResult = lineupData
+    ? transformLineups(LINEUP_DATA, lineupData.rows, resolver)
+    : { slots: [], warnings: [] };
+  const draftsResult = draftData
+    ? transformDrafts(DRAFT_HISTORY, draftData.rows, resolver)
+    : { picks: [], warnings: [] };
 
   for (const w of [
     ...seasonsResult.warnings, ...gamesResult.warnings,
@@ -171,6 +212,28 @@ export async function buildSnapshot(
       divisionName: (gt.division as string | null) ?? null,
     };
   });
+
+  if (!workbook) {
+    warnings.push({
+      code: 'no_workbook',
+      message:
+        'Built from the Google export alone, so there is no lineup or draft detail — ' +
+        'bench regret and the draft pages will be empty.',
+    });
+  } else if (history) {
+    const lineupYears = new Set(lineupsResult.slots.map((s) => s.year));
+    const gameYears = [...new Set(gamesResult.gameTeams.map((g) => g.year))].sort();
+    const without = gameYears.filter((y) => !lineupYears.has(y));
+    if (without.length > 0) {
+      warnings.push({
+        code: 'seasons_without_lineups',
+        message:
+          `Games are loaded for ${without.join(', ')} but the workbook has no lineup ` +
+          `rows for ${without.length === 1 ? 'that season' : 'those seasons'}, so bench ` +
+          `regret and roster detail stop before ${without[0]}.`,
+      });
+    }
+  }
 
   const played = teamGames.filter((t) => t.wasPlayed);
   const teamSeasons = seasonsResult.teamSeasons;
@@ -490,11 +553,41 @@ export async function buildSnapshot(
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  const fileIdx = argv.indexOf('--file');
-  const workbook =
-    (fileIdx !== -1 ? argv[fileIdx + 1] : undefined) ?? process.env.RBB_WORKBOOK_PATH;
-  if (!workbook) {
-    console.error('Usage: pnpm snapshot --file <path to RBB_League_History.xlsx>');
+  const flag = (name: string): string | undefined => {
+    const i = argv.indexOf(name);
+    if (i === -1) return undefined;
+    const next = argv[i + 1];
+    return next && !next.startsWith('--') ? next : undefined;
+  };
+
+  const workbook = flag('--file') ?? process.env.RBB_WORKBOOK_PATH;
+  let history = flag('--history') ?? process.env.RBB_HISTORY_PATH;
+
+  // --history-id downloads the live Google sheet instead of reading a local export.
+  // This is what the scheduled update uses: the sheet the commissioner maintains is
+  // read directly, so his weekly edit IS the site's update.
+  const historyId = flag('--history-id') ?? process.env.RBB_HISTORY_SHEET_ID;
+  if (historyId && !history) {
+    const { downloadSheet } = await import('./probe-sheet.ts');
+    const { tmpdir } = await import('node:os');
+    console.log(`Downloading the League History sheet from Google…`);
+    const buf = await downloadSheet(historyId);
+    history = join(tmpdir(), 'rbb-history-live.xlsx');
+    await writeFile(history, buf);
+    console.log(`  got ${(buf.byteLength / 1024).toFixed(0)} KB`);
+  }
+
+  if (!workbook && !history) {
+    console.error(
+      'Usage: pnpm snapshot [--file <workbook.xlsx>] [--history <export.xlsx> | --history-id <id>]\n' +
+        '\n' +
+        '  --file        the Excel workbook — the only source of lineup and draft data\n' +
+        '  --history     a Google Sheets export saved to disk\n' +
+        '  --history-id  download the live Google sheet instead (needs internet)\n' +
+        '\n' +
+        'The Google history is ahead of the Excel: it has 2025 and the 2024 placings.\n' +
+        'At least one source is required.',
+    );
     process.exitCode = 1;
     return;
   }
@@ -509,8 +602,14 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log('Reading the workbook…');
-  const snapshot = await buildSnapshot(workbook, resolver);
+  console.log(
+    workbook && history
+      ? 'Reading the workbook and the Google history…'
+      : history
+        ? 'Reading the Google history…'
+        : 'Reading the workbook…',
+  );
+  const snapshot = await buildSnapshot({ workbook, history }, resolver);
 
   await mkdir(dirname(SNAPSHOT_PATH), { recursive: true });
   await writeFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot, null, 0)}\n`, 'utf8');

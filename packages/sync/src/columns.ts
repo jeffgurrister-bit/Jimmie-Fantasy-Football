@@ -328,6 +328,112 @@ export const PLAYERS: SheetSpec = {
   ],
 };
 
+// -----------------------------------------------------------------------------
+//  The Google Sheets export of "RBB League History".
+//
+//  The commissioner keeps a Google copy of the same history, and it is AHEAD of the
+//  Excel: it carries 2025 (which the workbook does not) and it has every playoff
+//  placing filled in, including 2024's. So it is the better source for games and
+//  season finishes. It has no lineup data at all, which the workbook does, so the
+//  two are read together rather than one replacing the other.
+// -----------------------------------------------------------------------------
+
+/**
+ * Builds a spec for the same data living in a differently-shaped sheet.
+ *
+ * Derived rather than copied: the Google "Game Data" tab is the GameData sheet with
+ * two columns renamed and one added, and duplicating all 55 entries to express that
+ * would guarantee the two drift apart.
+ */
+export function deriveSpec(
+  base: SheetSpec,
+  overrides: {
+    key: string;
+    sheetName: string;
+    headerRow: number;
+    keyColumn?: string;
+    /** old source header -> new source header */
+    rename?: Record<string, string>;
+    /** headers present here that this sheet does not have */
+    drop?: readonly string[];
+    alsoIgnore?: readonly string[];
+    description?: string;
+  },
+): SheetSpec {
+  const rename = overrides.rename ?? {};
+  const drop = new Set(overrides.drop ?? []);
+  return {
+    key: overrides.key,
+    sheetName: overrides.sheetName,
+    headerRow: overrides.headerRow,
+    keyColumn: rename[overrides.keyColumn ?? base.keyColumn] ?? overrides.keyColumn ?? base.keyColumn,
+    description: overrides.description ?? base.description,
+    columns: base.columns
+      .filter((c) => !drop.has(c.source))
+      .map((c) => (rename[c.source] ? { ...c, source: rename[c.source]! } : c)),
+    ignored: [...base.ignored, ...(overrides.alsoIgnore ?? [])],
+  };
+}
+
+/** "Game Data" in the Google export — GameData, one row lower, two renames. */
+export const GS_GAME_DATA: SheetSpec = deriveSpec(GAME_DATA, {
+  key: 'GS_GameData',
+  sheetName: 'Game Data',
+  headerRow: 2,
+  rename: { 'Weekly Rank': 'Wk Rank', 'Opp. Wk Rnk': 'Opp. Rank' },
+  alsoIgnore: ['Year_Name'],
+  description:
+    'The Google copy of GameData, covering 2016-2025. Header row is index 2 rather ' +
+    'than 1, and two rank columns are spelled differently.',
+});
+
+/**
+ * "Excel Drop" in the Google export — the season-finishes table.
+ *
+ * Field names deliberately match the Finishes spec so the same transform reads
+ * either one. It carries more than Finishes does (regular and postseason W/L and
+ * points) but not draft slot or a finals flag.
+ *
+ * The key is `Place Reg` rather than the row id: this tab pre-creates 300 empty
+ * rows for seasons out to 2050, and every one of them HAS a `Year Name`. Only a
+ * season actually played has a regular-season placing.
+ */
+export const GS_FINISHES: SheetSpec = {
+  key: 'GS_Finishes',
+  sheetName: 'Excel Drop',
+  headerRow: 3,
+  keyColumn: 'Place Reg',
+  description:
+    'Season finishes from the Google export, 2016-2025 — including the 2024 and ' +
+    '2025 postseason placings that are blank in the Excel workbook.',
+  columns: [
+    { source: 'Year Name', field: 'source_id', kind: 'string', requireValue: true,
+      note: 'Same {Year}_{Name} form as the Excel Finishes ID.' },
+    { source: 'Year', field: 'year', kind: 'int', requireValue: true },
+    { source: 'Name', field: 'team', kind: 'string', requireValue: true },
+    { source: '# of Teams', field: 'num_teams', kind: 'int' },
+    { source: 'Div./Conf.', field: 'division', kind: 'string' },
+    { source: 'Place Reg', field: 'regular_finish', kind: 'ordinal', requireValue: true },
+    { source: 'Place Post', field: 'final_finish', kind: 'ordinal',
+      note: '"1st" is the champion. Filled in for every season here, 2024 included.' },
+    { source: 'Place Div.', field: 'division_finish', kind: 'ordinal' },
+    { source: 'W Reg', field: 'reg_wins', kind: 'int' },
+    { source: 'L Reg', field: 'reg_losses', kind: 'int' },
+    { source: 'PF Reg', field: 'reg_points_for', kind: 'number' },
+    { source: 'PA Reg', field: 'reg_points_against', kind: 'number' },
+  ],
+  ignored: [],
+  // This tab is one wide slab of several unrelated blocks side by side — 76 named
+  // columns of which twelve are wanted — so the unexpected-column check is off.
+  // A rename among the twelve still fails.
+  allowExtraColumns: true,
+  // Columns 8-27 are the season-finishes block. The window is essential, not a
+  // tidiness measure: `Name` also appears at column 4 and column 41 in other
+  // blocks, and without it the field resolves to the wrong block's list and every
+  // season gets the wrong champion.
+  columnWindow: [8, 27],
+};
+
 export const ALL_SHEETS: readonly SheetSpec[] = [
   GAME_DATA,
   LINEUP_DATA,
