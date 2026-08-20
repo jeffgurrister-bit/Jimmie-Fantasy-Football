@@ -16,6 +16,8 @@ dist/
 *.xlsx
 *.xlsm
 !data/workbook/*.xlsx
+# Spreadsheets pulled down by the Read Google Sheets workflow — inspection only.
+downloaded-*.xlsx
 !docs/fixtures/**/*.xlsx
 
 .DS_Store

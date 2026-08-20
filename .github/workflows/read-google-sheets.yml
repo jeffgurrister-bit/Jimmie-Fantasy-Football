@@ -1,0 +1,54 @@
+# Reads the commissioner's Google Sheets and reports what is in them.
+#
+# WHY THIS RUNS HERE
+# The environment the site was developed in cannot reach docs.google.com, so the
+# layout of those sheets is unknown. A GitHub runner has ordinary internet access,
+# so it can look on our behalf and print what it finds into this workflow's log.
+#
+# HOW TO USE IT
+#   Actions -> "Read Google Sheets" -> Run workflow.
+# Then open the run, expand "Read the sheets", and copy the output. It also attaches
+# each spreadsheet as a downloadable .xlsx artifact.
+#
+# This reads only. It changes nothing and deploys nothing.
+name: Read Google Sheets
+
+on:
+  workflow_dispatch:
+    inputs:
+      which:
+        description: 'Which sheets (space separated), or blank for all'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Read the sheets
+        working-directory: packages/sync
+        run: npx tsx src/probe-sheet.ts --save ${{ inputs.which }}
+
+      # Attaching the downloads means the exact files can be pulled off this run and
+      # inspected directly, without anyone having to export them by hand.
+      - name: Attach the spreadsheets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: google-sheets
+          path: packages/sync/downloaded-*.xlsx
+          if-no-files-found: warn
+          retention-days: 7

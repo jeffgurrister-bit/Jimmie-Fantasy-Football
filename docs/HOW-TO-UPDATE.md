@@ -118,19 +118,39 @@ Check it any time:
 pnpm --filter @jff/sync check-managers
 ```
 
-## The one thing still missing
+## The version with no steps at all
 
-Uploading a file is a browser away, but it is still a manual step, and the workbook
-is a 12 MB file added to the repository each time.
+Uploading a file is only a browser away, but it is still a step, and it puts a 12 MB
+workbook into the repository each time.
 
-The version with no steps at all is for the site to read the **Google Sheets**
-directly — on a schedule during the season, or when a button is pressed. Then
-nothing is uploaded, because the sheet you already maintain *is* the source.
+The real goal is for the site to read the **Google Sheets** directly, on a schedule
+during the season. Then there is nothing to upload and nothing to click: the sheet
+already being maintained every week *is* the update.
 
-That is not built yet, for a concrete reason: the Google history sheet is laid out
-differently from the Excel workbook. Its tabs are `Banners`, `Championships`,
-`History`, `Records`, `Game Data`, `Previous Drafts`, `Excel Drop` — not the
-`GameData` / `LineupData` / `Finishes` structure the importer understands. Mapping
-it needs someone to read those tabs, and the environment this was built in cannot
-reach Google. Once that mapping exists, the same robot can run on a schedule with
-no upload at all.
+Nothing about that is blocked in principle. A GitHub Actions runner has ordinary
+internet access and can fetch a link-shared sheet, and Google will hand over a whole
+spreadsheet as `.xlsx` from a plain URL:
+
+```
+https://docs.google.com/spreadsheets/d/<id>/export?format=xlsx
+```
+
+which is a better door than the per-tab CSV endpoint because it arrives as one file,
+includes hidden tabs, and can go through the very same reader the local workbook
+uses.
+
+What is missing is knowledge of the layout. The Google history sheet is arranged
+differently from the Excel workbook — its tabs are `Banners`, `Championships`,
+`History`, `Records`, `Game Data`, `Previous Drafts`, `Excel Drop`, not the
+`GameData` / `LineupData` / `Finishes` structure the importer knows — and the
+environment this was developed in cannot reach Google to look.
+
+So there is a workflow that looks on our behalf:
+
+**Actions → "Read Google Sheets" → Run workflow.**
+
+It downloads each sheet, prints every tab with its size and first few rows into the
+run log, and attaches the spreadsheets as artifacts. It reads only: it changes
+nothing, commits nothing and deploys nothing. Its output is what the real reader
+gets written from — and running it also proves the network path works before any
+code depends on it.

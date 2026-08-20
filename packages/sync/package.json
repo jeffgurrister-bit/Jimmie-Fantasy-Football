@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "verify": "tsx src/doctor.ts",
-    "snapshot": "tsx src/snapshot.ts"
+    "snapshot": "tsx src/snapshot.ts",
+    "probe-sheet": "tsx src/probe-sheet.ts"
   },
   "dependencies": {
     "@jff/db": "workspace:*",
