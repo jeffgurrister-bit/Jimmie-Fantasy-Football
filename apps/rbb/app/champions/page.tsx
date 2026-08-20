@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { NoData } from '../../components/NoData.tsx';
+import { ScrollTable } from '../../components/Table.tsx';
 import { ordinal } from '../../lib/format.ts';
 import { champions, titleCounts } from '../../lib/data.ts';
 
@@ -37,21 +38,29 @@ export default function ChampionsPage(): React.ReactElement {
       </section>
       <section>
         <h2>Titles per manager</h2>
-        <ul className="plain card card-pad narrow">
+        <ScrollTable
+          hint={false}
+          head={
+            <tr>
+              <th>Manager</th>
+              <th>Titles</th>
+              <th>Years</th>
+            </tr>
+          }
+        >
           {titles.map((t) => (
-            <li key={t.manager_id} className="row-between">
-              <span>
+            <tr key={t.manager_id}>
+              <td>
                 <Link href={`/managers/${t.manager_id}`}>{t.display_name}</Link>
                 {t.canonical_name !== t.display_name ? (
                   <span className="muted tiny"> · {t.canonical_name}</span>
                 ) : null}
-              </span>
-              <span>
-                <strong>{t.titles}</strong> <span className="muted tiny">{t.years}</span>
-              </span>
-            </li>
+              </td>
+              <td className="num-strong">{t.titles}</td>
+              <td className="muted">{t.years}</td>
+            </tr>
           ))}
-        </ul>
+        </ScrollTable>
       </section>
     </>
   );

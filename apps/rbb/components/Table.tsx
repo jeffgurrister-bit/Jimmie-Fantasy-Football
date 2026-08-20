@@ -11,17 +11,21 @@ export function ScrollTable({
   head,
   children,
   hint = 'Swipe the table sideways for more columns',
+  variant,
 }: {
-  head: ReactNode;
+  /** Pass null for a table that needs no header row, such as a list of scores. */
+  head?: ReactNode;
   children: ReactNode;
   hint?: string | false;
+  /** Extra class on the card, for tables that need a shared width. */
+  variant?: string;
 }): React.ReactElement {
   return (
-    <div className="card table-card">
+    <div className={variant ? `card table-card ${variant}` : 'card table-card'}>
       {hint === false ? null : <p className="scroll-hint">{hint}</p>}
       <div className="scroller">
         <table>
-          <thead>{head}</thead>
+          {head ? <thead>{head}</thead> : null}
           <tbody>{children}</tbody>
         </table>
       </div>

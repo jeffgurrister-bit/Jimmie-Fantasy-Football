@@ -70,19 +70,26 @@ export default function HomePage(): React.ReactElement {
 
       <section>
         <h2>Most titles</h2>
-        <ul className="plain card card-pad narrow">
+        <ScrollTable
+          hint={false}
+          head={
+            <tr>
+              <th>Manager</th>
+              <th>Titles</th>
+              <th>Years</th>
+            </tr>
+          }
+        >
           {titles.map((t) => (
-            <li key={t.manager_id} className="row-between">
-              <span>
-                <Link href={`/managers/${t.manager_id}`}>{t.display_name}</Link>{' '}
-                <span className="muted tiny">{t.years}</span>
-              </span>
-              <strong>
-                {t.titles} {t.titles === 1 ? 'title' : 'titles'}
-              </strong>
-            </li>
+            <tr key={t.manager_id}>
+              <td>
+                <Link href={`/managers/${t.manager_id}`}>{t.display_name}</Link>
+              </td>
+              <td className="num-strong">{t.titles}</td>
+              <td className="muted">{t.years}</td>
+            </tr>
           ))}
-        </ul>
+        </ScrollTable>
       </section>
 
       <section>

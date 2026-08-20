@@ -134,10 +134,13 @@ h3 { font-size: 0.97rem; margin: 0 0 8px; }
 }
 .card-pad { padding: 14px; }
 
-/* A card whose only content is a table shrinks to fit it, so the table's own
-   width decides the card's width instead of the other way round. On a phone the
-   cap plus the inner scroller take over. */
-.table-card { width: fit-content; max-width: 100%; }
+/* A card that shrinks to its contents rather than stretching across the page.
+   Used wherever a card holds a table or a short list of label/value rows — without
+   it the content sits at the left edge with a wide empty gap to the right, which is
+   what made these look broken. On a phone `max-width` plus the inner scroller take
+   over. */
+.table-card,
+.card.fit { width: fit-content; max-width: 100%; }
 
 /* ---------- stat tiles ---------- */
 .tiles {
@@ -282,21 +285,15 @@ ul.plain { list-style: none; padding: 0; margin: 0; }
 ul.plain li { padding: 9px 0; border-bottom: 1px solid var(--border); }
 ul.plain li:last-child { border-bottom: none; }
 
-/* A label and its value, kept next to each other.
-   `justify-content: space-between` across a 1000px card flings the two apart and
-   reads as a mistake, so these rows are capped at a width where the pair still
-   looks related. The cap, not the flex, is what does the work. */
+/* A label and its value, kept next to each other. Capping the ROW is not enough on
+   its own — the card around it also has to shrink, or the row just sits in a pool
+   of empty card. `.card.fit` below is the other half. */
 .row-between {
   display: flex;
   justify-content: space-between;
-  gap: 20px;
+  gap: 24px;
   align-items: baseline;
-  max-width: 34rem;
 }
-
-/* For cards holding nothing but label/value rows, so the card itself does not
-   stretch past its contents on a wide screen. */
-.card.narrow { max-width: 36rem; }
 
 footer.site {
   border-top: 1px solid var(--border);
@@ -321,3 +318,21 @@ footer.site {
 }
 .banner.pending .yr { color: var(--text-dim); }
 .banner .who.muted { color: var(--text-dim); font-weight: 600; }
+
+/* Score rows: the matchup reads left to right as name–score–dash–score–name, so
+   the two score columns hug the dash between them instead of sitting at opposite
+   ends of the row. */
+td.dash { padding-left: 2px; padding-right: 2px; text-align: center; }
+tbody td.strong { font-weight: 700; }
+tbody tr td:nth-child(2) { text-align: right; padding-right: 4px; }
+tbody tr td:nth-child(4) { text-align: left; padding-left: 4px; }
+/* The away-team name sits left-aligned, following its score. */
+tbody tr td:nth-child(5) { text-align: left; }
+
+/* Week-by-week score cards stack directly on top of each other, so they share a
+   width — sized to the longest name pairing — rather than each shrinking to its own
+   contents and leaving a ragged right edge down the page. */
+.table-card.scores { width: 100%; max-width: 26rem; }
+.table-card.scores table { width: 100%; }
+.table-card.scores td:first-child { width: 34%; }
+.table-card.scores td:last-child { width: 1%; white-space: nowrap; }

@@ -108,30 +108,23 @@ export default async function SeasonPage({
                   </span>
                 ) : null}
               </h3>
-              <ul className="plain card card-pad">
+              <ScrollTable hint={false} head={null} variant="scores">
                 {list.map((g) => {
                   const homeWon = (g.home_score ?? 0) > (g.away_score ?? 0);
                   return (
-                    <li key={g.game_id} className="row-between">
-                      <span>
-                        <span className={homeWon ? 'win' : 'loss'}>{g.home_name}</span>{' '}
-                        <span className="muted">vs</span>{' '}
-                        <span className={homeWon ? 'loss' : 'win'}>
-                          {g.away_name ?? '—'}
-                        </span>
-                        {g.round_game ? (
-                          <span className="muted tiny"> · {g.round_game}</span>
-                        ) : null}
-                      </span>
-                      <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                        <strong className={homeWon ? 'win' : ''}>{num(g.home_score)}</strong>
-                        <span className="muted"> – </span>
-                        <strong className={homeWon ? '' : 'win'}>{num(g.away_score)}</strong>
-                      </span>
-                    </li>
+                    <tr key={g.game_id}>
+                      {/* Winner in bold, loser dimmed. Colouring both names green and
+                          red made every row shout; weight carries it more quietly. */}
+                      <td className={homeWon ? 'strong' : 'muted'}>{g.home_name}</td>
+                      <td className={homeWon ? 'num-strong' : 'muted'}>{num(g.home_score)}</td>
+                      <td className="muted dash">–</td>
+                      <td className={homeWon ? 'muted' : 'num-strong'}>{num(g.away_score)}</td>
+                      <td className={homeWon ? 'muted' : 'strong'}>{g.away_name ?? '—'}</td>
+                      <td className="muted tiny">{g.round_game ?? ''}</td>
+                    </tr>
                   );
                 })}
-              </ul>
+              </ScrollTable>
             </div>
           ))}
       </section>
