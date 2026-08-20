@@ -72,11 +72,25 @@ two cannot drift.
 
 ### Deploying
 
-Vercel builds `apps/rbb` via the root `vercel.json`, so a fresh clone deploys with
-no dashboard configuration and nothing to configure afterwards.
+This is a pnpm monorepo, so each site is its own Vercel project pointed at its own
+app folder — the pattern Vercel documents for monorepos.
 
-When the Dyno Mites site is added, it becomes a second Vercel project with **Root
-Directory** set to `apps/dynomites`.
+| Setting | Value |
+| --- | --- |
+| **Root Directory** | `apps/rbb` |
+| Include files outside the root directory | **Enabled** — required, `apps/rbb` imports types from `packages/db` |
+| Framework | Next.js (auto-detected) |
+| Build / install commands | leave empty — auto-detected |
+| Environment variables | none |
+
+There is deliberately no `vercel.json`. An earlier attempt kept Root Directory at
+the repo root and used `vercel.json` to redirect the build with `buildCommand` plus
+an `outputDirectory` of `apps/rbb/.next`. That is not how Vercel expects Next.js to
+be deployed from a monorepo, and it failed. Pointing Root Directory at the app
+instead lets normal framework detection do the work.
+
+The Dyno Mites site will be a second project with Root Directory `apps/dynomites`,
+sharing the same repository.
 
 ### Verified against the real workbook
 
