@@ -27,11 +27,12 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
   BenchRegret, ChampionRow, DraftSlotRow, GameRow, HeadToHead, LeagueTotals,
-  ManagerProfile, ManagerSeason, RecordGame, SeasonStanding, SeasonSummary,
-  StandingRow, TitleCount,
+  ManagerProfile, ManagerSeason, PowerRankingRow, RecordGame, SeasonStanding,
+  SeasonSummary, StandingRow, TitleCount,
 } from '@jff/db';
 import {
   DRAFT_HISTORY, FINISHES, GAME_DATA, GS_FINISHES, GS_GAME_DATA, LINEUP_DATA, PLAYERS,
+  PR_ALL_WEEKS,
 } from './columns.ts';
 import { createResolver, type ManagerResolver } from './managers.ts';
 import { readSheet } from './sources/rows.ts';
@@ -39,6 +40,7 @@ import { XlsxSource } from './sources/xlsx.ts';
 import { transformDrafts } from './transform/drafts.ts';
 import { transformGames, type GameTeamRecord } from './transform/games.ts';
 import { transformLineups } from './transform/lineups.ts';
+import { transformPowerRankings } from './transform/power-rankings.ts';
 import { transformSeasons } from './transform/seasons.ts';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -68,6 +70,8 @@ export interface Snapshot {
   };
   benchRegret: BenchRegret[];
   draftSlots: DraftSlotRow[];
+  /** Weekly power rankings by season, newest week first within each. */
+  powerRankings: Record<string, PowerRankingRow[]>;
   /** Non-fatal things the run noticed, shown on the site's about page. */
   warnings: Array<{ code: string; message: string }>;
 }
@@ -127,6 +131,11 @@ export interface SnapshotSources {
    * workbook — the site simply stops at 2024 and 2024 has no champion.
    */
   history?: string | undefined;
+  /**
+   * The Power Rankings Google export. Optional — without it the rankings pages are
+   * simply absent rather than the build failing.
+   */
+  powerRankings?: string | undefined;
 }
 
 export async function buildSnapshot(
@@ -141,6 +150,7 @@ export async function buildSnapshot(
   }
   const workbook = paths.workbook ? new XlsxSource(paths.workbook) : null;
   const history = paths.history ? new XlsxSource(paths.history) : null;
+  const rankingsBook = paths.powerRankings ? new XlsxSource(paths.powerRankings) : null;
   const warnings: Array<{ code: string; message: string }> = [];
 
   // Games and finishes come from whichever source is further ahead.
@@ -164,6 +174,11 @@ export async function buildSnapshot(
       ])
     : [null, null];
 
+  const rankingsData = rankingsBook ? await readSheet(rankingsBook, PR_ALL_WEEKS) : null;
+  const rankingsResult = rankingsData
+    ? transformPowerRankings(PR_ALL_WEEKS, rankingsData.rows, resolver)
+    : { rankings: [], warnings: [] };
+
   const seasonsResult = transformSeasons(finishSpec, finishesData.rows, resolver);
   const gamesResult = transformGames(gameSpec, gameData.rows, resolver);
   const lineupsResult = lineupData
@@ -175,7 +190,7 @@ export async function buildSnapshot(
 
   for (const w of [
     ...seasonsResult.warnings, ...gamesResult.warnings,
-    ...lineupsResult.warnings, ...draftsResult.warnings,
+    ...lineupsResult.warnings, ...draftsResult.warnings, ...rankingsResult.warnings,
   ]) {
     warnings.push({ code: w.code, message: w.message });
   }
@@ -547,6 +562,18 @@ export async function buildSnapshot(
     },
     benchRegret,
     draftSlots,
+    powerRankings: (() => {
+      const byYear: Record<string, PowerRankingRow[]> = {};
+      for (const r of rankingsResult.rankings) {
+        (byYear[String(r.year)] ??= []).push(r);
+      }
+      // Newest week first, and within a week ordered by rank, which is how a
+      // rankings post reads.
+      for (const list of Object.values(byYear)) {
+        list.sort((a, b2) => b2.week - a.week || a.rank - b2.rank);
+      }
+      return byYear;
+    })(),
     warnings,
   };
 }
@@ -566,6 +593,7 @@ async function main(): Promise<void> {
   // --history-id downloads the live Google sheet instead of reading a local export.
   // This is what the scheduled update uses: the sheet the commissioner maintains is
   // read directly, so his weekly edit IS the site's update.
+  const powerRankings = flag('--power-rankings') ?? process.env.RBB_POWER_RANKINGS_PATH;
   const historyId = flag('--history-id') ?? process.env.RBB_HISTORY_SHEET_ID;
   if (historyId && !history) {
     const { downloadSheet } = await import('./probe-sheet.ts');
@@ -584,6 +612,7 @@ async function main(): Promise<void> {
         '  --file        the Excel workbook — the only source of lineup and draft data\n' +
         '  --history     a Google Sheets export saved to disk\n' +
         '  --history-id  download the live Google sheet instead (needs internet)\n' +
+        '  --power-rankings  the Power Rankings export, for the weekly rankings pages\n' +
         '\n' +
         'The Google history is ahead of the Excel: it has 2025 and the 2024 placings.\n' +
         'At least one source is required.',
@@ -609,7 +638,7 @@ async function main(): Promise<void> {
         ? 'Reading the Google history…'
         : 'Reading the workbook…',
   );
-  const snapshot = await buildSnapshot({ workbook, history }, resolver);
+  const snapshot = await buildSnapshot({ workbook, history, powerRankings }, resolver);
 
   await mkdir(dirname(SNAPSHOT_PATH), { recursive: true });
   await writeFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot, null, 0)}\n`, 'utf8');
@@ -619,7 +648,10 @@ async function main(): Promise<void> {
     `\nWrote ${SNAPSHOT_PATH}\n` +
       `  ${(bytes / 1024).toFixed(0)} KB — ${snapshot.totals.seasons} seasons, ` +
       `${snapshot.totals.games} games, ${snapshot.champions.length} champions, ` +
-      `${Object.keys(snapshot.managers).length} managers`,
+      `${Object.keys(snapshot.managers).length} managers` +
+      (Object.keys(snapshot.powerRankings).length > 0
+        ? `, power rankings for ${Object.keys(snapshot.powerRankings).length} seasons`
+        : ''),
   );
   if (snapshot.warnings.length > 0) {
     console.log(`\n${snapshot.warnings.length} thing(s) worth a look:`);

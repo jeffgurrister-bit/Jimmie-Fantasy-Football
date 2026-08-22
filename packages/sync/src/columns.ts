@@ -434,6 +434,40 @@ export const GS_FINISHES: SheetSpec = {
   columnWindow: [8, 27],
 };
 
+// -----------------------------------------------------------------------------
+//  The Power Rankings sheet — RBB's weekly editorial, currently screenshotted into
+//  the league chat. "All Weeks" holds every week ever published, 2019 onward.
+// -----------------------------------------------------------------------------
+export const PR_ALL_WEEKS: SheetSpec = {
+  key: 'PowerRankings',
+  sheetName: 'All Weeks',
+  headerRow: 1,
+  keyColumn: 'YR - WK - ID',
+  description:
+    'Every published power-ranking row, 2019-2025: the rank, the previous rank, the ' +
+    'team name of the week, and the commissioner\'s written note.',
+  columns: [
+    { source: 'YR - WK - ID', field: 'source_id', kind: 'string', requireValue: true },
+    { source: 'Year', field: 'year', kind: 'int', requireValue: true },
+    { source: 'Week', field: 'week', kind: 'int', requireValue: true },
+    { source: 'Power Rank', field: 'rank', kind: 'int', requireValue: true },
+    { source: 'Team', field: 'team_name', kind: 'string',
+      note: 'The franchise name that week. RBB managers rename their teams constantly.' },
+    { source: 'Owner', field: 'owner', kind: 'string', requireValue: true,
+      note: 'Manager short name, resolved through data/managers.yaml.' },
+    { source: 'Record', field: 'record', kind: 'string' },
+    { source: 'Streak', field: 'streak', kind: 'string' },
+    { source: 'Prev. Rank', field: 'previous_rank', kind: 'int',
+      note: 'Blank in week 1, which is what makes the movement arrow absent there.' },
+    { source: 'Notes', field: 'notes', kind: 'string',
+      note: 'The write-up. This is the thing currently trapped in a screenshot.' },
+  ],
+  ignored: ['Week-ID', 'Team ID', 'WS', 'LS', 'W Prev Wk', 'L Prev Wk'],
+  // Columns 0-15 are the block; the tab has scratch columns beyond it.
+  allowExtraColumns: true,
+  columnWindow: [0, 15],
+};
+
 export const ALL_SHEETS: readonly SheetSpec[] = [
   GAME_DATA,
   LINEUP_DATA,

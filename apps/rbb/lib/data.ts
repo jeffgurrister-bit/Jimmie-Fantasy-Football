@@ -19,8 +19,8 @@
 import snapshotJson from '../data/snapshot.json' with { type: 'json' };
 import type {
   BenchRegret, ChampionRow, DraftSlotRow, GameRow, HeadToHead, LeagueTotals,
-  ManagerProfile, ManagerSeason, RecordGame, SeasonStanding, SeasonSummary,
-  StandingRow, TitleCount,
+  ManagerProfile, ManagerSeason, PowerRankingRow, RecordGame, SeasonStanding,
+  SeasonSummary, StandingRow, TitleCount,
 } from '@jff/db';
 
 interface Snapshot {
@@ -45,6 +45,7 @@ interface Snapshot {
   };
   benchRegret: BenchRegret[];
   draftSlots: DraftSlotRow[];
+  powerRankings: Record<string, PowerRankingRow[]>;
   warnings: Array<{ code: string; message: string }>;
 }
 
@@ -115,6 +116,18 @@ export function benchRegret(): BenchRegret[] {
 
 export function draftSlots(): DraftSlotRow[] {
   return snapshot.draftSlots;
+}
+
+/** Seasons that have published power rankings, newest first. */
+export function powerRankingYears(): number[] {
+  return Object.keys(snapshot.powerRankings ?? {})
+    .map(Number)
+    .sort((a, b) => b - a);
+}
+
+/** One season's rankings, newest week first, ordered by rank within a week. */
+export function powerRankings(year: number): PowerRankingRow[] {
+  return snapshot.powerRankings?.[String(year)] ?? [];
 }
 
 export function warnings(): Array<{ code: string; message: string }> {

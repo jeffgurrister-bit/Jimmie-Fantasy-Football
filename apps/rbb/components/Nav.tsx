@@ -6,6 +6,7 @@ const LINKS = [
   { href: '/standings', label: 'All-time' },
   { href: '/seasons', label: 'Seasons' },
   { href: '/records', label: 'Records' },
+  { href: '/power-rankings', label: 'Power rankings' },
   { href: '/bench', label: 'Bench regret' },
 ];
 

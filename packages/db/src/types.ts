@@ -128,6 +128,24 @@ export interface LineupSlot {
   bench_gap: number | null;
 }
 
+/** One team's entry in one published weekly power ranking. */
+export interface PowerRankingRow {
+  year: number;
+  week: number;
+  rank: number;
+  previous_rank: number | null;
+  /** Places gained since last week; positive is upward. Null in week one. */
+  movement: number | null;
+  manager_id: string;
+  display_name: string;
+  /** The franchise name that week — RBB managers rename constantly. */
+  team_name: string | null;
+  record: string | null;
+  streak: string | null;
+  /** The write-up. The thing currently trapped in a screenshot. */
+  notes: string | null;
+}
+
 export interface SyncRun {
   id: number;
   league_id: LeagueId | null;

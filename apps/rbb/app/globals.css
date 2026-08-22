@@ -355,3 +355,30 @@ tbody tr td:nth-child(5) { text-align: left; }
 }
 .division-mark { display: flex; align-items: center; gap: 9px; font-size: 0.9rem; font-weight: 600; }
 .division-mark img { width: 42px; height: 42px; border-radius: 8px; }
+
+/* Power rankings. The table stays narrow; the write-ups get a comfortable reading
+   measure rather than stretching the full page width. */
+.table-card.rankings { width: 100%; max-width: 36rem; }
+.table-card.rankings table { width: 100%; }
+/* Names read left-to-right; only the numbers want right alignment. Default cell
+   alignment is right, which left the manager column butting against the team. */
+.table-card.rankings td:nth-child(3),
+.table-card.rankings th:nth-child(3),
+.table-card.rankings td:nth-child(4),
+.table-card.rankings th:nth-child(4) { text-align: left; }
+.table-card.rankings td:nth-child(2),
+.table-card.rankings th:nth-child(2) { text-align: center; }
+.notes { max-width: 46rem; margin-top: 10px; }
+.notes li { font-size: 0.9rem; line-height: 1.5; }
+nav.tabs.season-switch {
+  padding: 0 0 14px;
+  margin: 0 0 4px;
+}
+nav.tabs.season-switch a {
+  color: var(--accent);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+nav.tabs.season-switch a[aria-current='page'] { background: var(--accent); color: #fff; }
+a.banner.season-link { display: block; }
+a.banner.season-link:hover { text-decoration: none; border-color: var(--accent); }
