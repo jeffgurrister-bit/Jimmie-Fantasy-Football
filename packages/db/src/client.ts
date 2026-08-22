@@ -30,8 +30,10 @@ export function connectionString(): string {
   const url = process.env.DATABASE_URL;
   if (!url) {
     throw new Error(
-      'DATABASE_URL is not set. Copy .env.example to .env.local and fill in the ' +
-        'Supabase connection string (Project Settings -> Database -> Connection string).',
+      'DATABASE_URL is not set. Copy .env.example to .env.local and fill in a ' +
+        'Postgres connection string.\n' +
+        'Note that the website does not need one — it reads a committed snapshot. ' +
+        'This layer is only used by the tools and by features that need live queries.',
     );
   }
   return url;
@@ -42,8 +44,11 @@ export function getPool(): pg.Pool {
     pool = new pg.Pool({
       connectionString: connectionString(),
       max: Number(process.env.PGPOOL_MAX ?? 5),
-      // Supabase requires TLS but serves a cert the default CA set will reject
-      // when connecting through the pooler.
+      // Nothing here is tied to a particular Postgres host — Neon, Supabase and a
+      // plain server all work from the connection string alone. Hosted Postgres
+      // generally requires TLS while serving a cert the default CA set rejects
+      // through a pooler, hence rejectUnauthorized: false; PGSSL_DISABLE=1 turns
+      // TLS off entirely for a local throwaway database.
       ssl: process.env.PGSSL_DISABLE === '1' ? false : { rejectUnauthorized: false },
     });
   }
