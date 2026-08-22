@@ -67,15 +67,21 @@ jobs:
           if [ -n "$book" ]; then echo "Using workbook $book"; else echo "No workbook — Google sheet only."; fi
           echo "book=$book" >> "$GITHUB_OUTPUT"
 
-      - name: Rebuild the data from the Google sheet
+      - name: Rebuild the data from the Google sheets
         env:
-          # The RBB "League History" sheet. Must stay link-shared for this to work.
+          # Both must stay link-shared for this to work. Every source the snapshot
+          # has belongs here: leaving one out does not fail, it writes a snapshot
+          # with that section empty. The build refuses to do that now, so a missing
+          # id shows up as a red run rather than as pages quietly vanishing.
           RBB_HISTORY_SHEET_ID: 1_jhoVbxloZG8lxDaDXMIkG7SEoKBfU1_2MBI4qSPRYg
+          RBB_POWER_RANKINGS_SHEET_ID: 1YANpO-Mzht6FJpc93ul1jCHONEswHCp85Ah_rFskR4g
         run: |
+          # The ids are read from the environment, so the only difference between
+          # the two calls is the optional workbook.
           if [ -n "${{ steps.find.outputs.book }}" ]; then
-            pnpm snapshot --file "${{ steps.find.outputs.book }}" --history-id "$RBB_HISTORY_SHEET_ID"
+            pnpm snapshot --file "${{ steps.find.outputs.book }}"
           else
-            pnpm snapshot --history-id "$RBB_HISTORY_SHEET_ID"
+            pnpm snapshot
           fi
 
       - name: Make sure the site still builds with the new data

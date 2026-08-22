@@ -34,6 +34,7 @@ import {
   DRAFT_HISTORY, FINISHES, GAME_DATA, GS_FINISHES, GS_GAME_DATA, LINEUP_DATA, PLAYERS,
   PR_ALL_WEEKS,
 } from './columns.ts';
+import { SyncError } from './errors.ts';
 import { createResolver, type ManagerResolver } from './managers.ts';
 import { readSheet } from './sources/rows.ts';
 import { XlsxSource } from './sources/xlsx.ts';
@@ -578,6 +579,62 @@ export async function buildSnapshot(
   };
 }
 
+/**
+ * Stops a rebuild that would empty a section the site is already serving.
+ *
+ * The snapshot is assembled from several sources, and each is optional so that a
+ * partial rebuild is possible. That flexibility has a sharp edge: leave a source
+ * off the command line and the build still succeeds, writes a snapshot with that
+ * section empty, and the scheduled job commits it. Whole pages then disappear from
+ * the live site and nothing anywhere reports an error — the same shape of failure
+ * as the Excel Drop column mix-up, which also produced confident, wrong output.
+ *
+ * So a section going from populated to empty is treated as a mistake until someone
+ * says otherwise. Shrinking is fine; vanishing is not.
+ */
+export async function refuseToLoseASection(
+  next: Snapshot,
+  allowed: boolean,
+  currentPath: string = SNAPSHOT_PATH,
+): Promise<void> {
+  let current: Snapshot;
+  try {
+    current = JSON.parse(await readFile(currentPath, 'utf8')) as Snapshot;
+  } catch {
+    return; // No snapshot yet, so nothing can be lost.
+  }
+
+  const size = (v: unknown): number =>
+    Array.isArray(v) ? v.length : v && typeof v === 'object' ? Object.keys(v).length : 0;
+
+  const sections: Array<[string, keyof Snapshot, string]> = [
+    ['power rankings', 'powerRankings', '--power-rankings-id'],
+    ['seasons', 'seasons', '--history-id or --file'],
+    ['champions', 'champions', '--history-id'],
+    ['bench regret', 'benchRegret', '--file'],
+    ['draft slots', 'draftSlots', '--file'],
+  ];
+
+  const lost = sections.filter(
+    ([, key]) => size(current[key]) > 0 && size(next[key]) === 0,
+  );
+  if (lost.length === 0) return;
+
+  const lines = lost.map(
+    ([label, key, flagName]) =>
+      `  • ${label}: ${size(current[key])} → 0, missing ${flagName}`,
+  );
+  const message =
+    `This rebuild would empty ${lost.length} section(s) the site is already serving:\n` +
+    `${lines.join('\n')}\n\n` +
+    'That usually means a source was left off the command line rather than that the\n' +
+    'data is really gone. Nothing was written. Add the flags above and re-run, or\n' +
+    'pass --allow-losing-sections if the removal is intended.';
+
+  if (!allowed) throw new SyncError(message);
+  console.log(`${message}\n\nProceeding anyway (--allow-losing-sections).`);
+}
+
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const flag = (name: string): string | undefined => {
@@ -588,22 +645,43 @@ async function main(): Promise<void> {
   };
 
   const workbook = flag('--file') ?? process.env.RBB_WORKBOOK_PATH;
-  let history = flag('--history') ?? process.env.RBB_HISTORY_PATH;
 
-  // --history-id downloads the live Google sheet instead of reading a local export.
-  // This is what the scheduled update uses: the sheet the commissioner maintains is
-  // read directly, so his weekly edit IS the site's update.
-  const powerRankings = flag('--power-rankings') ?? process.env.RBB_POWER_RANKINGS_PATH;
-  const historyId = flag('--history-id') ?? process.env.RBB_HISTORY_SHEET_ID;
-  if (historyId && !history) {
+  // Each Google source can be given either as a local export or as a spreadsheet
+  // id to download live. The scheduled update uses ids, so the sheets the
+  // commissioner maintains are read directly and his weekly edit IS the update.
+  //
+  // A download failure is deliberately fatal rather than skipped. Carrying on
+  // without a source would write a snapshot missing whole sections and commit it,
+  // which takes those pages off the live site without anything looking wrong.
+  const resolveSource = async (
+    local: string | undefined,
+    id: string | undefined,
+    what: string,
+    tmpName: string,
+  ): Promise<string | undefined> => {
+    if (local || !id) return local;
     const { downloadSheet } = await import('./probe-sheet.ts');
     const { tmpdir } = await import('node:os');
-    console.log(`Downloading the League History sheet from Google…`);
-    const buf = await downloadSheet(historyId);
-    history = join(tmpdir(), 'rbb-history-live.xlsx');
-    await writeFile(history, buf);
+    console.log(`Downloading the ${what} sheet from Google…`);
+    const buf = await downloadSheet(id);
+    const path = join(tmpdir(), tmpName);
+    await writeFile(path, buf);
     console.log(`  got ${(buf.byteLength / 1024).toFixed(0)} KB`);
-  }
+    return path;
+  };
+
+  const history = await resolveSource(
+    flag('--history') ?? process.env.RBB_HISTORY_PATH,
+    flag('--history-id') ?? process.env.RBB_HISTORY_SHEET_ID,
+    'League History',
+    'rbb-history-live.xlsx',
+  );
+  const powerRankings = await resolveSource(
+    flag('--power-rankings') ?? process.env.RBB_POWER_RANKINGS_PATH,
+    flag('--power-rankings-id') ?? process.env.RBB_POWER_RANKINGS_SHEET_ID,
+    'Power Rankings',
+    'rbb-power-rankings-live.xlsx',
+  );
 
   if (!workbook && !history) {
     console.error(
@@ -612,7 +690,8 @@ async function main(): Promise<void> {
         '  --file        the Excel workbook — the only source of lineup and draft data\n' +
         '  --history     a Google Sheets export saved to disk\n' +
         '  --history-id  download the live Google sheet instead (needs internet)\n' +
-        '  --power-rankings  the Power Rankings export, for the weekly rankings pages\n' +
+        '  --power-rankings     the Power Rankings export, for the weekly rankings\n' +
+        '  --power-rankings-id  download the live Power Rankings sheet instead\n' +
         '\n' +
         'The Google history is ahead of the Excel: it has 2025 and the 2024 placings.\n' +
         'At least one source is required.',
@@ -639,6 +718,7 @@ async function main(): Promise<void> {
         : 'Reading the workbook…',
   );
   const snapshot = await buildSnapshot({ workbook, history, powerRankings }, resolver);
+  await refuseToLoseASection(snapshot, argv.includes('--allow-losing-sections'));
 
   await mkdir(dirname(SNAPSHOT_PATH), { recursive: true });
   await writeFile(SNAPSHOT_PATH, `${JSON.stringify(snapshot, null, 0)}\n`, 'utf8');

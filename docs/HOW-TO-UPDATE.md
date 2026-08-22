@@ -131,36 +131,63 @@ Instead a robot pulls on a timer:
 Jimmie edits his Google Sheet   (nothing else changes about his routine)
         │
         ▼
-twice a day, a scheduled job downloads the sheet, rebuilds the site's
+each morning, a scheduled job downloads the sheets, rebuilds the site's
 data file, and commits it
         │
         ▼
 Vercel sees the commit and republishes the site
 ```
 
-So the answer to "does the site catch it automatically" is **yes, within a few
-hours** — not instantly, and nothing is connected in real time. It runs at 07:00 and
-19:00 UTC. To make it immediate, run it by hand: **Actions → "Update league data" →
-Run workflow**.
+So the answer to "does the site catch it automatically" is **yes, by the next
+morning** — not instantly, and nothing is connected in real time. To make it
+immediate, run it by hand: **Actions → "Update league data" → Run workflow**.
 
-If the sheet has not changed anything, the job commits nothing and no deployment
-happens. If the sheet is broken or unreachable, the job fails and the live site
-keeps serving the last good data — it is never left half-updated.
+It runs at **13:00 UTC, about 7am in Chicago**: daily from August through January,
+and Mondays only from February through July, when the sheets do not change. The time
+matters because a failed run sends an email, and an email should not arrive at 1am —
+which is exactly what the first version did.
 
-The one requirement: the League History sheet must stay shared as **"Anyone with the
-link can view."** That is how the job reads it without a password. If sharing is
-revoked the job fails and says so.
+If the sheets have not changed anything, the job commits nothing and no deployment
+happens. If a sheet is broken or unreachable, the job fails and the live site keeps
+serving the last good data — it is never left half-updated.
 
-## Two sources, and why
+The one requirement: both the **League History** and **Power Rankings** sheets must
+stay shared as **"Anyone with the link can view."** That is how the job reads them
+without a password. If sharing is revoked the job fails and says which sheet.
+
+## Three sources, and why
 
 | | Comes from | Why |
 | --- | --- | --- |
-| Games, standings, champions | the **Google sheet** | It is ahead of the Excel — it has 2025, and every 2024 playoff placing |
-| Lineups, bench regret, drafts | the **Excel workbook** | The Google sheet has no lineup data at all |
+| Games, standings, champions | the **League History** sheet | It is ahead of the Excel — it has 2025, and every 2024 playoff placing |
+| Weekly power rankings | the **Power Rankings** sheet | Its `All Weeks` tab already holds every ranking and write-up since 2019 |
+| Lineups, bench regret, drafts | the **Excel workbook** | Neither Google sheet has any lineup data |
 
-The Google half updates itself on the schedule above. The Excel half is historical
-and does not change week to week; upload a fresh copy to `data/workbook/` whenever
-it does.
+Both Google sheets update themselves on the schedule above. The Excel half is
+historical and does not change week to week; upload a fresh copy to `data/workbook/`
+whenever it does.
+
+The rankings are read, never recomputed. They are your rankings, with your reasoning
+attached — a formula of ours that disagreed with the number you published would
+simply be wrong.
+
+### A section can never quietly disappear
+
+Each source is optional, so a rebuild that is missing one still works — and that is
+a trap. Leave the Power Rankings sheet out and the build would succeed, write a data
+file with no rankings in it, and commit it; the rankings pages would vanish from the
+site with nothing anywhere reporting a problem.
+
+So the build now refuses. If a rebuild would take a section from populated to empty
+it stops, names the section and the missing source, and writes nothing:
+
+```
+This rebuild would empty 1 section(s) the site is already serving:
+  • power rankings: 7 → 0, missing --power-rankings-id
+```
+
+A section getting *smaller* is fine and passes without comment. Only a section
+disappearing outright is treated as a mistake.
 
 ## The old version of this, for reference
 
