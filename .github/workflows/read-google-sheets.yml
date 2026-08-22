@@ -29,9 +29,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # No `version:` here on purpose. pnpm/action-setup refuses to run when the
+      # version is declared both here and as `packageManager` in package.json, and
+      # it fails in seconds before anything else happens. package.json is the one
+      # place that pins it, so the action reads it from there.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22

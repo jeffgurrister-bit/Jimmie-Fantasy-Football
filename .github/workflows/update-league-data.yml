@@ -14,8 +14,15 @@ name: Update league data
 
 on:
   schedule:
-    # 07:00 and 19:00 UTC — after Sunday/Monday games have settled either way.
-    - cron: '0 7,19 * * *'
+    # 13:00 UTC is about 7am in Chicago, where the league is. The first version ran
+    # at 07:00 UTC, which is 1am there — so the failure email arrived in the middle
+    # of the night. Times that produce mail should land during waking hours.
+    #
+    # Daily through the season, weekly out of it: the sheet does not change between
+    # February and July, and 700 pointless runs a year is 700 chances to send a
+    # spurious alert.
+    - cron: '0 13 * 8-12,1 *'   # daily, August-January
+    - cron: '0 13 * 2-7 1'      # Mondays, February-July
   push:
     paths:
       - 'data/workbook/*.xlsx'
@@ -35,9 +42,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # No `version:` here on purpose. pnpm/action-setup refuses to run when the
+      # version is declared both here and as `packageManager` in package.json, and
+      # it fails in seconds before anything else happens. package.json is the one
+      # place that pins it, so the action reads it from there.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22
