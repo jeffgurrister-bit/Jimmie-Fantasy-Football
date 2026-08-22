@@ -148,8 +148,12 @@ matters because a failed run sends an email, and an email should not arrive at 1
 which is exactly what the first version did.
 
 If the sheets have not changed anything, the job commits nothing and no deployment
-happens. If a sheet is broken or unreachable, the job fails and the live site keeps
-serving the last good data — it is never left half-updated.
+happens. That comparison deliberately ignores the timestamp the data file records
+about itself — it moves on every run, so comparing the whole file would redeploy the
+site every morning whether or not a single number changed.
+
+If a sheet is broken or unreachable, the job fails and the live site keeps serving
+the last good data — it is never left half-updated.
 
 The one requirement: both the **League History** and **Power Rankings** sheets must
 stay shared as **"Anyone with the link can view."** That is how the job reads them

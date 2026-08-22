@@ -93,6 +93,18 @@ jobs:
             echo "Nothing changed in the league data — no commit, no deployment."
             exit 0
           fi
+
+          # The file carries the time it was generated, so it differs on every run
+          # even when not one number moved. Comparing the whole file would therefore
+          # commit and redeploy the site daily forever. Compare with that field
+          # removed, and treat a timestamp-only change as no change.
+          data() { jq -S 'del(.generatedAt)' "$1" | sha256sum | cut -d' ' -f1; }
+          git show HEAD:apps/rbb/data/snapshot.json > /tmp/previous.json
+          if [ "$(data /tmp/previous.json)" = "$(data apps/rbb/data/snapshot.json)" ]; then
+            git checkout -- apps/rbb/data/snapshot.json
+            echo "Only the build timestamp changed — no commit, no deployment."
+            exit 0
+          fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add apps/rbb/data/snapshot.json
