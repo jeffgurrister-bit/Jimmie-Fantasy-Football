@@ -233,8 +233,9 @@ export async function buildSnapshot(
     warnings.push({
       code: 'no_workbook',
       message:
-        'Built from the Google export alone, so there is no lineup or draft detail — ' +
-        'bench regret and the draft pages will be empty.',
+        'Built from the Google export alone, which holds no lineup or draft data, so ' +
+        'bench regret and the draft pages come from the last uploaded workbook rather ' +
+        'than from this run.',
     });
   } else if (history) {
     const lineupYears = new Set(lineupsResult.slots.map((s) => s.year));
@@ -580,6 +581,65 @@ export async function buildSnapshot(
 }
 
 /**
+ * Keeps sections whose source was not part of this run, instead of emptying them.
+ *
+ * The sources are deliberately independent: the two Google sheets are downloaded
+ * every morning, while the Excel workbook holds lineup and draft history that does
+ * not change week to week and is not committed to the repo. So the scheduled run
+ * genuinely has no workbook, and rebuilding from Google alone would drop bench
+ * regret and the draft pages every single time.
+ *
+ * Recomputing them is impossible — the data is not there. Failing is wrong, because
+ * nothing is actually broken. So the previous snapshot's copy is carried over: the
+ * Google half refreshes daily, the Excel half persists until someone uploads a newer
+ * workbook. It is stale by construction and says so in the run log.
+ *
+ * Only a source that was ABSENT gets this treatment. A source that was present and
+ * produced nothing is a different thing entirely — that is schema drift or real data
+ * loss, and `refuseToLoseASection` below stops it.
+ */
+export async function carryForwardUnsourcedSections(
+  next: Snapshot,
+  provided: { workbook: boolean; powerRankings: boolean },
+  currentPath: string = SNAPSHOT_PATH,
+): Promise<void> {
+  let current: Snapshot;
+  try {
+    current = JSON.parse(await readFile(currentPath, 'utf8')) as Snapshot;
+  } catch {
+    return; // Nothing to carry forward from.
+  }
+
+  const carried: string[] = [];
+
+  if (!provided.workbook && current.benchRegret?.length && next.benchRegret.length === 0) {
+    next.benchRegret = current.benchRegret;
+    next.draftSlots = current.draftSlots;
+    // These totals count workbook rows, so they have to travel with the sections
+    // they describe or the site reports zero lineups while showing bench regret.
+    next.totals.lineup_rows = current.totals.lineup_rows;
+    next.totals.draft_picks = current.totals.draft_picks;
+    carried.push('bench regret and draft history (from the Excel workbook)');
+  }
+
+  const hadRankings = Object.keys(current.powerRankings ?? {}).length > 0;
+  if (!provided.powerRankings && hadRankings && Object.keys(next.powerRankings).length === 0) {
+    next.powerRankings = current.powerRankings;
+    carried.push('power rankings');
+  }
+
+  if (carried.length === 0) return;
+
+  next.warnings.push({
+    code: 'carried_forward',
+    message:
+      `Kept the previous data for ${carried.join(' and ')}, because ` +
+      `${carried.length === 1 ? 'that source was' : 'those sources were'} not part of ` +
+      `this run. It is unchanged since ${current.generatedAt.slice(0, 10)}.`,
+  });
+}
+
+/**
  * Stops a rebuild that would empty a section the site is already serving.
  *
  * The snapshot is assembled from several sources, and each is optional so that a
@@ -718,6 +778,10 @@ async function main(): Promise<void> {
         : 'Reading the workbook…',
   );
   const snapshot = await buildSnapshot({ workbook, history, powerRankings }, resolver);
+  await carryForwardUnsourcedSections(snapshot, {
+    workbook: Boolean(workbook),
+    powerRankings: Boolean(powerRankings),
+  });
   await refuseToLoseASection(snapshot, argv.includes('--allow-losing-sections'));
 
   await mkdir(dirname(SNAPSHOT_PATH), { recursive: true });

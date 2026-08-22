@@ -171,6 +171,20 @@ The rankings are read, never recomputed. They are your rankings, with your reaso
 attached — a formula of ours that disagreed with the number you published would
 simply be wrong.
 
+### The Excel half is kept, not rebuilt
+
+The scheduled run has no workbook — it is not in the repository, and only the two
+Google sheets are downloaded. So bench regret and the draft pages cannot be rebuilt
+each morning. Rather than emptying them, the job keeps the previous copy: the Google
+half refreshes daily, the Excel half stays put until someone uploads a newer
+workbook. The run log says so plainly each time:
+
+```
+• Kept the previous data for bench regret and draft history (from the Excel
+  workbook), because that source was not part of this run. It is unchanged
+  since 2026-08-22.
+```
+
 ### A section can never quietly disappear
 
 Each source is optional, so a rebuild that is missing one still works — and that is
@@ -178,8 +192,9 @@ a trap. Leave the Power Rankings sheet out and the build would succeed, write a 
 file with no rankings in it, and commit it; the rankings pages would vanish from the
 site with nothing anywhere reporting a problem.
 
-So the build now refuses. If a rebuild would take a section from populated to empty
-it stops, names the section and the missing source, and writes nothing:
+So the build refuses. If a source **was** part of the run and its section still came
+out empty — a renamed tab, a cleared sheet — it stops, names the section and the
+missing source, and writes nothing:
 
 ```
 This rebuild would empty 1 section(s) the site is already serving:

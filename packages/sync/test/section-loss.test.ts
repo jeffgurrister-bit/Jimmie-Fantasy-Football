@@ -11,18 +11,32 @@ import { describe, expect, it } from 'vitest';
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { refuseToLoseASection, type Snapshot } from '../src/snapshot.ts';
+import {
+  carryForwardUnsourcedSections, refuseToLoseASection, type Snapshot,
+} from '../src/snapshot.ts';
 
 /** A snapshot carrying only the fields the guard looks at, each populated. */
 function snapshotWith(over: Partial<Snapshot> = {}): Snapshot {
   return {
-    powerRankings: { '2025': [{}] },
+    generatedAt: '2026-08-20T12:00:00.000Z',
+    powerRankings: { '2025': [{ rank: 1 }] },
     seasons: [{}],
     champions: [{}],
-    benchRegret: [{}],
-    draftSlots: [{}],
+    benchRegret: [{ player_name: 'Some Player' }],
+    draftSlots: [{ draft_slot: 1 }],
+    totals: { seasons: 10, games: 902, lineup_rows: 24668, draft_picks: 1494, managers: 15 },
+    warnings: [],
     ...over,
   } as unknown as Snapshot;
+}
+
+/** What a Google-only rebuild produces: no workbook sections, no rankings. */
+function googleOnly(): Snapshot {
+  return snapshotWith({
+    benchRegret: [],
+    draftSlots: [],
+    totals: { seasons: 10, games: 902, lineup_rows: 0, draft_picks: 0, managers: 15 } as never,
+  });
 }
 
 /** Writes `current` to a throwaway file and returns its path. */
@@ -83,5 +97,78 @@ describe('refusing to empty a section the site already serves', () => {
     await expect(
       refuseToLoseASection(snapshotWith({ powerRankings: {} }), false, current),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe('carrying forward a section whose source was not in this run', () => {
+  it('keeps bench regret and drafts when the workbook is absent', async () => {
+    // This is the scheduled run: two Google sheets, no workbook in the repo. It
+    // must not drop the Excel-only sections, and must not fail either.
+    const current = await on_disk(snapshotWith());
+    const next = googleOnly();
+    await carryForwardUnsourcedSections(
+      next, { workbook: false, powerRankings: true }, current,
+    );
+
+    expect(next.benchRegret).toHaveLength(1);
+    expect(next.draftSlots).toHaveLength(1);
+    // The totals count workbook rows, so they have to travel with their sections.
+    expect(next.totals.lineup_rows).toBe(24668);
+    expect(next.totals.draft_picks).toBe(1494);
+    // And the guard it used to trip must now be satisfied.
+    await expect(refuseToLoseASection(next, false, current)).resolves.toBeUndefined();
+  });
+
+  it('says in the run log what it kept and how old it is', async () => {
+    const current = await on_disk(snapshotWith({ generatedAt: '2026-08-14T09:00:00.000Z' }));
+    const next = googleOnly();
+    await carryForwardUnsourcedSections(
+      next, { workbook: false, powerRankings: true }, current,
+    );
+    const carried = next.warnings.find((w) => w.code === 'carried_forward');
+    expect(carried?.message).toContain('bench regret and draft history');
+    expect(carried?.message).toContain('2026-08-14');
+  });
+
+  it('keeps power rankings when only that sheet is missing', async () => {
+    const current = await on_disk(snapshotWith());
+    const next = snapshotWith({ powerRankings: {} });
+    await carryForwardUnsourcedSections(
+      next, { workbook: true, powerRankings: false }, current,
+    );
+    expect(Object.keys(next.powerRankings)).toEqual(['2025']);
+  });
+
+  it('leaves a section alone when its source WAS in the run', async () => {
+    // A present source that produced nothing is schema drift, not a missing file,
+    // and must fall through to the guard rather than being papered over.
+    const current = await on_disk(snapshotWith());
+    const next = googleOnly();
+    await carryForwardUnsourcedSections(
+      next, { workbook: true, powerRankings: true }, current,
+    );
+    expect(next.benchRegret).toHaveLength(0);
+    await expect(refuseToLoseASection(next, false, current)).rejects.toThrow(
+      /bench regret: 1 → 0/,
+    );
+  });
+
+  it('does not overwrite sections this run actually produced', async () => {
+    const current = await on_disk(snapshotWith());
+    const next = snapshotWith({ benchRegret: [{ player_name: 'Newer Player' }] as never });
+    await carryForwardUnsourcedSections(
+      next, { workbook: false, powerRankings: false }, current,
+    );
+    expect(next.benchRegret).toEqual([{ player_name: 'Newer Player' }]);
+    expect(next.warnings).toHaveLength(0);
+  });
+
+  it('has nothing to carry forward on a first build', async () => {
+    const next = googleOnly();
+    await carryForwardUnsourcedSections(
+      next, { workbook: false, powerRankings: false }, '/nope/none.json',
+    );
+    expect(next.benchRegret).toHaveLength(0);
+    expect(next.warnings).toHaveLength(0);
   });
 });
