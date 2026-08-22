@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ScrollTable } from '../../../components/Table.tsx';
 import { int, num, ordinal, record } from '../../../lib/format.ts';
 import { seasonGames, seasonStandings, seasonSummary, seasonYears } from '../../../lib/data.ts';
+import { divisionLogo } from '../../../lib/divisions.ts';
 
 /** Prerenders one page per season at build time. */
 export function generateStaticParams(): Array<{ year: string }> {
@@ -54,6 +55,23 @@ export default async function SeasonPage({
           This season&apos;s final placings have not been filled in on the source
           spreadsheet, so the site can show the regular season but not the postseason.
         </p>
+      ) : null}
+
+      {divisions.length > 0 ? (
+        <section>
+          <h3>Divisions</h3>
+          <div className="divisions">
+            {divisions.map((d) => {
+              const logo = divisionLogo(d);
+              return (
+                <span className="division-mark" key={d}>
+                  {logo ? <img src={logo} alt="" width={42} height={42} /> : null}
+                  {d}
+                </span>
+              );
+            })}
+          </div>
+        </section>
       ) : null}
 
       <section>

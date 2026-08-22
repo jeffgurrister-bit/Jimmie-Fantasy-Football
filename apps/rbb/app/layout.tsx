@@ -29,10 +29,16 @@ export default function RootLayout({
       <body>
         <header className="masthead">
           <div className="wrap">
-            <h1>
-              <Link href="/">Risky Biscuit Brigade</Link>
-            </h1>
-            <p className="tagline">League history since 2016</p>
+            <div className="brand">
+              {/* The league's own logo, lifted out of the League History sheet. */}
+              <img src="/logos/league.png" alt="" width={46} height={46} />
+              <div>
+                <h1>
+                  <Link href="/">Risky Biscuit Brigade</Link>
+                </h1>
+                <p className="tagline">League history since 2016</p>
+              </div>
+            </div>
           </div>
           <Nav />
         </header>

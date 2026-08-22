@@ -1,25 +1,25 @@
 /* =============================================================================
    Risky Biscuit Brigade — mobile-first, no CSS framework.
 
-   Neutral slate palette. The workbook itself carries no colour scheme — its theme
-   is Google Sheets' stock default (#4285F4, #EA4335, #FBBC04, #34A853) and its
-   fills are the standard pastel highlight swatches — so there is no house style to
-   inherit. This aims for the plain, legible look of a stats reference, with gold
-   reserved for championships so a trophy still reads as a trophy.
+   The league's real colours, taken from its own logo: navy #112232 and light blue
+   #88BEE2. They were never in the spreadsheet's cell fills — that theme is just
+   Google Sheets' stock default — they were inside the logo image embedded in the
+   League History sheet, sampled straight off the pixels.
+   Gold stays reserved for championships so a trophy still reads as a trophy.
 
    Designed and checked at 375px first; desktop is the enhancement.
    ============================================================================= */
 
 :root {
-  --bg: #f6f7f9;
+  --bg: #f4f7fa;
   --surface: #ffffff;
-  --surface-2: #f0f2f5;
-  --border: #dde1e7;
-  --text: #15181d;
-  --text-dim: #5f6873;
-  --accent: #1a5fa8;
-  --accent-soft: #e4edf7;
-  --header: #1f2630;
+  --surface-2: #eaf1f8;
+  --border: #d4e1ee;
+  --text: #112232;          /* the navy from the logo */
+  --text-dim: #5c6e80;
+  --accent: #1a5c8f;        /* the logo blue, darkened enough to read as text */
+  --accent-soft: #e2eef8;
+  --header: #112232;
   --gold: #a8801a;
   --win: #17683c;
   --loss: #a12b2b;
@@ -30,15 +30,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #0f1216;
-    --surface: #171b21;
-    --surface-2: #1f252d;
-    --border: #2b323b;
-    --text: #e9edf2;
-    --text-dim: #99a3b0;
-    --accent: #6fa8e0;
-    --accent-soft: #16283b;
-    --header: #141a21;
+    --bg: #0a131c;
+    --surface: #112232;      /* the navy carries the surfaces in dark mode */
+    --surface-2: #17293a;
+    --border: #24394d;
+    --text: #e8f1f8;
+    --text-dim: #92a7ba;
+    --accent: #88bee2;       /* the logo blue, used as-is */
+    --accent-soft: #16293b;
+    --header: #0a131c;
     --gold: #d3ad48;
     --win: #4ec27f;
     --loss: #e58080;
@@ -72,6 +72,14 @@ a:hover { text-decoration: underline; }
   padding: 20px 0 18px;
   border-bottom: 3px solid var(--accent);
 }
+/* The wordmark sits beside the league's own logo. */
+.masthead .brand { display: flex; align-items: center; gap: 12px; }
+.masthead .brand img {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
 .masthead h1 {
   margin: 0;
   font-size: 1.4rem;
@@ -79,9 +87,9 @@ a:hover { text-decoration: underline; }
   line-height: 1.15;
 }
 .masthead .tagline {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   font-size: 0.82rem;
-  color: #a8b4c2;
+  color: #8fa8bf;
 }
 .masthead a { color: inherit; }
 
@@ -101,12 +109,12 @@ nav.tabs a {
   border-radius: 999px;
   font-size: 0.87rem;
   font-weight: 600;
-  color: #dbe3ec;
-  background: rgb(255 255 255 / 8%);
+  color: #cfe2f2;
+  background: rgb(136 190 226 / 12%);
   white-space: nowrap;
 }
-nav.tabs a:hover { background: rgb(255 255 255 / 16%); text-decoration: none; }
-nav.tabs a[aria-current='page'] { background: var(--accent); color: #fff; }
+nav.tabs a:hover { background: rgb(136 190 226 / 22%); text-decoration: none; }
+nav.tabs a[aria-current='page'] { background: #88bee2; color: #112232; }
 
 /* ---------- structure ---------- */
 main { padding: 22px 0 56px; }
@@ -336,3 +344,14 @@ tbody tr td:nth-child(5) { text-align: left; }
 .table-card.scores table { width: 100%; }
 .table-card.scores td:first-child { width: 34%; }
 .table-card.scores td:last-child { width: 1%; white-space: nowrap; }
+
+/* Division marks. The league only ran divisions in 2016 and from 2023, so these
+   appear on those season pages and nowhere else. */
+.divisions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+.division-mark { display: flex; align-items: center; gap: 9px; font-size: 0.9rem; font-weight: 600; }
+.division-mark img { width: 42px; height: 42px; border-radius: 8px; }
