@@ -1,0 +1,519 @@
+<title>RBB Spreadsheet Traps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+  :root {
+    --paper:      #f6f8fa;
+    --card:       #ffffff;
+    --ink:        #112232;
+    --ink-soft:   #4a5a6b;
+    --ink-faint:  #7b8896;
+    --rule:       #dde4ea;
+    --rule-soft:  #eaeff4;
+    --accent:     #1a5c8f;
+    --accent-bg:  #e7f0f7;
+    --silent:     #9a3b34;
+    --silent-bg:  #f9ecea;
+    --loud:       #2f6b4f;
+    --loud-bg:    #e8f2ec;
+    --code-bg:    #eef2f6;
+
+    --measure: 34rem;
+    --step-0: 1.0rem;
+    --step-1: 1.16rem;
+    --step-2: 1.45rem;
+    --step-3: 1.9rem;
+    --step-4: 2.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:     #0d1a26;
+      --card:      #142633;
+      --ink:       #e6eef4;
+      --ink-soft:  #a8bccb;
+      --ink-faint: #7d94a5;
+      --rule:      #24404f;
+      --rule-soft: #1b3341;
+      --accent:    #88bee2;
+      --accent-bg: #17313f;
+      --silent:    #e8968c;
+      --silent-bg: #33211f;
+      --loud:      #8fc9a9;
+      --loud-bg:   #172c23;
+      --code-bg:   #10222e;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:     #0d1a26;
+    --card:      #142633;
+    --ink:       #e6eef4;
+    --ink-soft:  #a8bccb;
+    --ink-faint: #7d94a5;
+    --rule:      #24404f;
+    --rule-soft: #1b3341;
+    --accent:    #88bee2;
+    --accent-bg: #17313f;
+    --silent:    #e8968c;
+    --silent-bg: #33211f;
+    --loud:      #8fc9a9;
+    --loud-bg:   #172c23;
+    --code-bg:   #10222e;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Source Sans 3", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: var(--step-0);
+    line-height: 1.62;
+    margin: 0;
+    padding: 0 1.15rem 5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap { max-width: var(--measure); margin: 0 auto; }
+  .wide { max-width: 46rem; margin: 0 auto; }
+
+  h1, h2, h3 {
+    font-family: "Zilla Slab", Georgia, serif;
+    text-wrap: balance;
+    line-height: 1.18;
+    margin: 0;
+  }
+
+  /* ---- masthead ---- */
+  header { padding: 3.2rem 0 2rem; }
+  .eyebrow {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 1rem;
+  }
+  h1 { font-size: var(--step-4); font-weight: 700; letter-spacing: -0.015em; }
+  .standfirst {
+    font-size: var(--step-1);
+    color: var(--ink-soft);
+    margin: 1.1rem 0 0;
+  }
+  .byline {
+    margin: 1.6rem 0 0;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.86rem;
+    color: var(--ink-faint);
+  }
+
+  section { padding: 2.4rem 0 0; }
+  h2 {
+    font-size: var(--step-3);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.5rem;
+  }
+  h2 + .lede { color: var(--ink-soft); margin: 0 0 1.4rem; }
+  p { margin: 0 0 1rem; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  strong { font-weight: 600; }
+  code, .mono {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.86em;
+  }
+  code {
+    background: var(--code-bg);
+    padding: 0.12em 0.36em;
+    border-radius: 3px;
+  }
+
+  /* ---- findings ---- */
+  .finding {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1.35rem 1.25rem 1.1rem;
+    margin-bottom: 1.1rem;
+  }
+  .finding > :last-child { margin-bottom: 0; }
+  .tag {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5em;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    padding: 0.3em 0.6em;
+    border-radius: 3px;
+    margin-bottom: 0.85rem;
+  }
+  .tag.silent { background: var(--silent-bg); color: var(--silent); }
+  .tag.loud   { background: var(--loud-bg);   color: var(--loud); }
+  .finding h3 {
+    font-size: var(--step-2);
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+  }
+  .whathappens {
+    border-left: 2px solid var(--rule);
+    padding-left: 0.9rem;
+    margin: 1rem 0;
+    color: var(--ink-soft);
+  }
+  .whathappens .label {
+    display: block;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 0.25rem;
+  }
+
+  /* ---- tables ---- */
+  .scroller { overflow-x: auto; margin: 1.2rem 0; }
+  table {
+    border-collapse: collapse;
+    width: max-content;
+    min-width: 100%;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--rule-soft);
+    white-space: nowrap;
+  }
+  th {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 400;
+    border-bottom-color: var(--rule);
+  }
+  td.num { font-family: "JetBrains Mono", ui-monospace, monospace; color: var(--ink-soft); }
+
+  /* ---- callout ---- */
+  .callout {
+    background: var(--accent-bg);
+    border-radius: 4px;
+    padding: 1.25rem 1.2rem;
+    margin: 1.5rem 0;
+  }
+  .callout > :last-child { margin-bottom: 0; }
+  .callout h3 {
+    font-size: var(--step-1);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  pre {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: 0.9rem 1rem;
+    overflow-x: auto;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    margin: 1.1rem 0;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  ul { padding-left: 1.15rem; margin: 0 0 1rem; }
+  li { margin-bottom: 0.4rem; }
+  li::marker { color: var(--ink-faint); }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--rule);
+    margin: 3rem 0 0;
+  }
+
+  footer {
+    padding: 2.2rem 0 0;
+    color: var(--ink-faint);
+    font-size: 0.88rem;
+  }
+
+  @media (min-width: 40rem) {
+    body { padding: 0 2rem 6rem; }
+    :root { --step-4: 3rem; }
+    .finding { padding: 1.6rem 1.5rem 1.3rem; }
+  }
+</style>
+
+<header class="wrap">
+  <p class="eyebrow">Risky Biscuit Brigade · notes for Jimmie</p>
+  <h1>Five traps in your own spreadsheets</h1>
+  <p class="standfirst">
+    None of this is about which tools to use. It is about your data — and it stays
+    true whether you build on Supabase, a database, or a plain JSON file.
+  </p>
+  <p class="byline">
+    Found while reading the League History, Power Rankings and Excel workbook you
+    shared. Two of these produce answers that look completely correct and are not.
+  </p>
+</header>
+
+<main>
+
+<section class="wrap">
+  <h2>Check your work against this</h2>
+  <p class="lede">The fastest way to know whether a build is right.</p>
+  <p>
+    Every champion, 2016 through 2025, cross-checked against the <code>Banners</code>
+    tab in your own League History sheet. If your version disagrees with any row here,
+    something upstream is wrong — and trap&nbsp;1 is the overwhelmingly likely cause.
+  </p>
+  <div class="scroller">
+    <table>
+      <thead>
+        <tr><th>Year</th><th>Champion</th><th>Year</th><th>Champion</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="num">2025</td><td>Joe Malak</td><td class="num">2020</td><td>Ryan Hangartner</td></tr>
+        <tr><td class="num">2024</td><td>Jim Perkins</td><td class="num">2019</td><td>Josh Jones</td></tr>
+        <tr><td class="num">2023</td><td>Austin Jones</td><td class="num">2018</td><td>Josh Baker</td></tr>
+        <tr><td class="num">2022</td><td>Josh Baker</td><td class="num">2017</td><td>Ryan Hangartner</td></tr>
+        <tr><td class="num">2021</td><td>Jimmie Perkins</td><td class="num">2016</td><td>Jimmie Perkins</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Two more numbers worth checking against: <strong>902 games</strong> and
+    <strong>10 seasons</strong>. If you are seeing roughly double the games, that is
+    trap&nbsp;2.
+  </p>
+  <div class="callout">
+    <h3>One note on 2024</h3>
+    <p>
+      Your Excel workbook has eight of twelve 2024 playoff placings blank, so 2024
+      looks like it has no champion. The Google League History sheet has them all
+      filled in. The Google sheet is ahead of the Excel — it also carries all of 2025.
+      Prefer it for anything about games, standings or finishes.
+    </p>
+  </div>
+</section>
+
+<hr>
+
+<section class="wrap">
+  <h2>The traps</h2>
+  <p class="lede">Tagged by whether the bug tells you it happened.</p>
+  <p>
+    The loud ones are fine — you will hit them and fix them in a minute. The silent
+    ones are the reason this document exists: they produce complete, plausible,
+    confidently wrong output, and nothing anywhere reports a problem.
+  </p>
+
+  <article class="finding">
+    <span class="tag silent">Silent · gets every champion wrong</span>
+    <h3>1. <span class="mono">Excel Drop</span> has three columns called <span class="mono">Name</span></h3>
+    <p>
+      That tab lays several unrelated blocks side by side and repeats header names
+      between them. <code>Name</code> appears at <strong>column 4, column 11 and
+      column 41</strong>.
+    </p>
+    <p>
+      Most spreadsheet readers key rows by header name, and the last match quietly
+      wins. So the finishes block's placings get paired with a different block's
+      list of managers.
+    </p>
+    <div class="whathappens">
+      <span class="label">What that looked like</span>
+      A full championship list, one champion per year, entirely believable — and wrong
+      in all ten years. It named a 4–10 team as a champion. Nothing crashed, nothing
+      rendered empty, no error appeared. It was caught only by checking the output
+      against the <code>Banners</code> tab.
+    </div>
+    <p>
+      <strong>The fix:</strong> tell the reader which span of columns the block owns —
+      here, columns 8 through 27 — and resolve names only inside it. Then check the
+      result against <code>Banners</code>, every time.
+    </p>
+  </article>
+
+  <article class="finding">
+    <span class="tag silent">Silent · doubles every count</span>
+    <h3>2. <span class="mono">GameData</span> stores every game twice</h3>
+    <p>
+      There is an <code>A/B</code> column. Each matchup appears once from each team's
+      point of view — an <code>A</code> row and a <code>B</code> row.
+    </p>
+    <p>
+      Counting rows gives you double the games. Summing points counts every point
+      twice. Win totals come out right, which is what makes this one sneaky: half your
+      numbers look fine.
+    </p>
+    <div class="whathappens">
+      <span class="label">The shape of it</span>
+      1,804 rows for 902 real games. Build the game list from the <code>A</code> rows
+      only; build per-team stats from all of them.
+    </div>
+    <p>
+      Worth asserting that the two sides are balanced, and that no row has an
+      <code>A/B</code> value that is neither <code>A</code> nor <code>B</code>. If that
+      ever stops being true, something changed upstream and you want to know.
+    </p>
+  </article>
+
+  <article class="finding">
+    <span class="tag silent">Silent · merges two people's careers</span>
+    <h3>3. Twenty managers, and the short names collide</h3>
+    <p>
+      No amount of clever code resolves this from the sheets alone. Across RBB and
+      Dyno Mites there are twenty people, and the names your sheets use are ambiguous:
+    </p>
+    <ul>
+      <li><strong>Two Perkinses</strong> — Jimmie and Jim</li>
+      <li><strong>Three Joneses</strong> — Josh, Austin, Nick</li>
+      <li><strong>Two Malaks</strong> — Joe and Jerry</li>
+      <li><strong>Two Amezcuas</strong> — Mike and Arturo</li>
+      <li><strong>Two Joshes, two Joes, two Jonathans</strong></li>
+    </ul>
+    <p>
+      Then there are nicknames that share nothing with the real name.
+      <strong><span class="mono">Yisha</span> is Josh Baker</strong> — confirmed three
+      independent ways, including that <code>Banners</code> credits Josh Baker with
+      2018 and 2022, exactly where <code>Finishes</code> says Yisha. And
+      <span class="mono">Jacube</span> is Jacob Schmiegelt.
+    </p>
+    <div class="whathappens">
+      <span class="label">Why it is worth the effort</span>
+      Guess wrong and two people's entire careers merge into one, or one person's
+      splits in two. Every record, every head-to-head and every title count is then
+      wrong, and it will look completely normal.
+    </div>
+    <p>
+      <strong>The fix:</strong> a hand-written list mapping every spelling to one
+      person, and code that <em>stops</em> when it meets a name that is not on the
+      list rather than guessing. Fifteen of the twenty are in RBB; Gil Smit is active
+      in RBB but retired from Dyno Mites, so membership is per-league, not global.
+    </p>
+  </article>
+
+  <article class="finding">
+    <span class="tag silent">Silent · reads as a score</span>
+    <h3>4. <span class="mono">Best BN over STRT</span> is a yes/no, not an amount</h3>
+    <p>
+      It looks like a margin. It is a <strong>0 or 1 flag</strong> meaning "the best
+      bench player outscored a starter." The actual margin is in
+      <code>BN&nbsp;Gap</code>.
+    </p>
+    <p>
+      Sort a bench-regret leaderboard by the wrong one and you get a list ordered by a
+      column that only ever holds 0 or 1 — which produces a ranking that renders
+      perfectly and means nothing.
+    </p>
+    <div class="whathappens">
+      <span class="label">One more from the same area</span>
+      When you do sort by <code>BN Gap</code>, two rows tie at exactly 37.95. Without
+      an explicit tiebreak the "worst bench decision ever" changes between runs. Break
+      ties on year, then week, then manager.
+    </div>
+  </article>
+
+  <article class="finding">
+    <span class="tag loud">Loud · you will notice this one</span>
+    <h3>5. Formula scaffolding and text in number columns</h3>
+    <p>
+      Two small things that will stop a naive import, which is the good outcome:
+    </p>
+    <ul>
+      <li>
+        Rows at the bottom of some tabs are formula scaffolding rather than data —
+        they carry <code>__</code> where an ID should be. Skip any row missing its key
+        column, and count what you skipped so a real problem cannot hide there.
+      </li>
+      <li>
+        Number columns sometimes hold words: <code>Undrafted</code>, <code>Bye</code>,
+        and an en-dash for "nothing here". Treat those as empty rather than letting
+        them become zero — a zero is a real value and will drag averages down.
+      </li>
+    </ul>
+  </article>
+</section>
+
+<hr>
+
+<section class="wrap">
+  <h2>Reading your Google Sheets automatically</h2>
+  <p class="lede">No API key, no service account, no OAuth.</p>
+  <p>
+    Google will hand over an entire spreadsheet as an <code>.xlsx</code> file from a
+    plain URL, as long as the sheet is shared as "anyone with the link can view":
+  </p>
+  <pre><code>https://docs.google.com/spreadsheets/d/&lt;id&gt;/export?format=xlsx</code></pre>
+  <p>This is a much better door than the per-tab CSV endpoint, for three reasons:</p>
+  <ul>
+    <li>One request for the whole document, not one per tab.</li>
+    <li>
+      It <strong>includes hidden tabs</strong> — which matters, because you hide your
+      formula machinery, and CSV cannot even enumerate those.
+    </li>
+    <li>
+      The file goes through the same reader as a local <code>.xlsx</code>, so what you
+      test against is what you get.
+    </li>
+  </ul>
+  <div class="callout">
+    <h3>It is proven, not theoretical</h3>
+    <p>
+      A scheduled job pulled both sheets unattended this morning — 4,049&nbsp;KB of
+      League History and 518&nbsp;KB of Power Rankings — with no credentials involved.
+      That is the whole "site updates itself" problem solved, and it costs nothing.
+    </p>
+    <p>
+      The one catch: if link-sharing is ever revoked, Google returns a
+      <em>sign-in page</em> with a success status rather than an error. Check that
+      what came back actually starts with <code>PK</code> — an <code>.xlsx</code> file
+      is a zip — or you will cheerfully parse an HTML login page.
+    </p>
+  </div>
+</section>
+
+<hr>
+
+<section class="wrap">
+  <h2>Also worth knowing</h2>
+  <p>
+    Your <strong>Power Rankings</strong> sheet has an <code>All Weeks</code> tab
+    holding every weekly ranking and write-up you have published since 2019 — 1,392
+    rows across seven seasons. It is the single richest thing in any of the five
+    sheets, and it is already structured. Read it rather than recomputing it: they are
+    your rankings, with your reasoning attached, and a formula that disagreed with the
+    number you published would just be wrong.
+  </p>
+  <p>
+    One open question I could not answer from the files: <strong>where does 2025
+    lineup data live?</strong> Neither Google sheet has lineup rows at all, and the
+    Excel workbook stops at 2024. So anything bench-related — best-player-you-benched,
+    roster detail — currently ends at 2024.
+  </p>
+</section>
+
+<hr>
+
+<footer class="wrap">
+  <p>
+    There is a working version of all of this — ten seasons, 902 games, the manager
+    map, the power rankings, and the scheduled Google pull — sitting in a repository
+    if you ever want to look at it or lift pieces from it. No pressure either way;
+    the traps above are the part that is genuinely hard to rediscover.
+  </p>
+</footer>
+
+</main>
