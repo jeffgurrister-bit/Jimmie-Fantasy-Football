@@ -119,7 +119,7 @@ describe('carrying forward a section whose source was not in this run', () => {
     await expect(refuseToLoseASection(next, false, current)).resolves.toBeUndefined();
   });
 
-  it('says in the run log what it kept and how old it is', async () => {
+  it('says what it kept', async () => {
     const current = await on_disk(snapshotWith({ generatedAt: '2026-08-14T09:00:00.000Z' }));
     const next = googleOnly();
     await carryForwardUnsourcedSections(
@@ -127,7 +127,23 @@ describe('carrying forward a section whose source was not in this run', () => {
     );
     const carried = next.warnings.find((w) => w.code === 'carried_forward');
     expect(carried?.message).toContain('bench regret and draft history');
-    expect(carried?.message).toContain('2026-08-14');
+  });
+
+  it('keeps the age of the data OUT of the stored message', async () => {
+    // A date in the message changes daily, so the snapshot's bytes change daily,
+    // so the scheduled job commits and redeploys daily even when no number moved.
+    // It did exactly that twice before this was caught.
+    const build = async (generatedAt: string): Promise<string> => {
+      const current = await on_disk(snapshotWith({ generatedAt }));
+      const next = googleOnly();
+      await carryForwardUnsourcedSections(
+        next, { workbook: false, powerRankings: true }, current,
+      );
+      return JSON.stringify(next.warnings);
+    };
+    expect(await build('2026-08-14T09:00:00.000Z')).toBe(
+      await build('2026-11-30T22:00:00.000Z'),
+    );
   });
 
   it('keeps power rankings when only that sheet is missing', async () => {

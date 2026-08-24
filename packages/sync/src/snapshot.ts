@@ -630,12 +630,21 @@ export async function carryForwardUnsourcedSections(
 
   if (carried.length === 0) return;
 
+  // How old the carried data is belongs in the run log, not in the message stored
+  // in the snapshot. Baking today's date into the file would change its contents
+  // every single day, which defeats the "nothing changed, do not deploy" check the
+  // scheduled job makes — and it did, for two runs, before this was spotted.
+  console.log(
+    `Kept ${carried.join(' and ')} from the previous run ` +
+      `(generated ${current.generatedAt.slice(0, 10)}).`,
+  );
+
   next.warnings.push({
     code: 'carried_forward',
     message:
       `Kept the previous data for ${carried.join(' and ')}, because ` +
       `${carried.length === 1 ? 'that source was' : 'those sources were'} not part of ` +
-      `this run. It is unchanged since ${current.generatedAt.slice(0, 10)}.`,
+      `this run.`,
   });
 }
 
